@@ -157,7 +157,10 @@ if __name__ == '__main__':
         mlflow.log_metric("test_score_mean", scores["test_score"].mean())
         mlflow.log_metric("test_score_max", scores["test_score"].max())
 
-        return scores["test_score_mean"].mean()
+        return scores["test_score"].mean()
     
-    study = optuna.create_study(study_name=os.path.dirname(__file__).split(os.sep)[-1])
+    study = optuna.create_study(
+        study_name=os.path.dirname(__file__).split(os.sep)[-1],
+        storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
+    )
     study.optimize(objective, n_trials=10, callbacks=[mlflc])

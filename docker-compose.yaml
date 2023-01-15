@@ -8,6 +8,7 @@ services:
     environment:
       - POSTGRES_PASSWORD=${DB_ADMIN_PASS}
       - DB_MLOPS_PASS=${DB_MLOPS_PASS}
+      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
     networks:
       - ax
 
@@ -57,6 +58,7 @@ services:
       context: services/experiment
     environment:
       - DB_MLOPS_PASS=${DB_MLOPS_PASS}
+      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
       - S3_BUCKET=${S3_BUCKET}
       - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
       - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
