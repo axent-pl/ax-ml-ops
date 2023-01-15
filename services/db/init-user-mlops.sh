@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+	CREATE USER mlops WITH PASSWORD '${DB_MLOPS_PASS}';
+	CREATE DATABASE mlops;
+	GRANT ALL ON SCHEMA public TO mlops;
+	GRANT ALL PRIVILEGES ON DATABASE mlops TO mlops;
+	ALTER DATABASE mlops OWNER TO mlops;
+EOSQL

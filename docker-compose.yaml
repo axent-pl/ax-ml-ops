@@ -1,0 +1,68 @@
+version: '3.4'
+
+services:
+
+  db:
+    build:
+      context: services/db
+    environment:
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASS}
+      - DB_MLOPS_PASS=${DB_MLOPS_PASS}
+    networks:
+      - ax
+
+  datastore-s3:
+    build:
+        context: services/datastore-s3
+    command:
+        - server
+        - /home/shared
+        - --console-address
+        - ":9001"
+    ports:
+        - "9000:9000"
+        - "9001:9001"
+    networks:
+        - ax
+
+  datastore-s3-config-job:
+    build:
+        context: services/datastore-s3-config
+    environment:
+        - S3_HOST=datastore-s3
+        - S3_PORT=9000
+        - S3_BUCKET=${S3_BUCKET}
+        - S3_AUTH_ROOT_KEY_ID=${S3_AUTH_ROOT_KEY_ID}
+        - S3_AUTH_ROOT_SECRET_KEY=${S3_AUTH_ROOT_SECRET_KEY}
+        - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
+        - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
+    networks:
+        - ax
+
+  mlflow:
+    build:
+      context: services/mlflow
+    environment:
+      - DB_MLOPS_PASS=${DB_MLOPS_PASS}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
+      - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
+    ports:
+      - 5000:5000
+    networks:
+      - ax
+
+  experiment:
+    build:
+      context: services/experiment
+    environment:
+      - DB_MLOPS_PASS=${DB_MLOPS_PASS}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
+      - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
+    networks:
+      - ax
+
+networks:
+  ax:
+    driver: bridge
