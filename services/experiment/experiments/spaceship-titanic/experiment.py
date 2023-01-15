@@ -145,14 +145,19 @@ if __name__ == '__main__':
         model = CatBoostClassifier(**params)
 
         kf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 7)
-        scores = cross_validate(model, X_train, y_train, cv = kf, scoring = "accuracy", n_jobs = -1)
+        scores = cross_validate(model, X_train, y_train, cv = kf, scoring = "accuracy", n_jobs = -1, return_train_score=True)
+
+        # mlflow.catboost.log_model(model, 'model')
         
-        print(scores)
+        mlflow.log_metric("train_score_min", scores["train_score"].min())
+        mlflow.log_metric("train_score_mean", scores["train_score"].mean())
+        mlflow.log_metric("train_score_max", scores["train_score"].max())
 
-        # mlflow.log_metric("train_score_mean", scores["train_score"].mean())
+        mlflow.log_metric("test_score_min", scores["test_score"].min())
         mlflow.log_metric("test_score_mean", scores["test_score"].mean())
+        mlflow.log_metric("test_score_max", scores["test_score"].max())
 
-        return scores["test_score"].mean()
+        return scores["test_score_mean"].mean()
     
-    study = optuna.create_study(study_name="Kaggle: Spaceship Titanic")
+    study = optuna.create_study(study_name=os.path.dirname(__file__).split(os.sep)[-1])
     study.optimize(objective, n_trials=10, callbacks=[mlflc])
