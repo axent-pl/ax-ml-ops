@@ -161,6 +161,8 @@ if __name__ == '__main__':
     
     study = optuna.create_study(
         study_name=os.path.dirname(__file__).split(os.sep)[-1],
+        load_if_exists = True,
+        direction = "maximize",
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
     )
     study.optimize(objective, n_trials=10, callbacks=[mlflc])

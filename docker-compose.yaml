@@ -53,6 +53,16 @@ services:
     networks:
       - ax
 
+  optuna-dashboard:
+    build:
+      context: services/optuna-dashboard
+    environment:
+      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
+    ports:
+      - 8080:8080
+    networks:
+      - ax
+
   experiment:
     build:
       context: services/experiment
