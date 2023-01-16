@@ -8,5 +8,7 @@ export AWS_SECRET_ACCESS_KEY=$S3_AUTH_SECRET_KEY
 for e in $(find experiments -name experiment.py);
 do
     echo "[INFO ]: Executing experiment ${e}"
-    python $e
+    python $e &
 done;
+
+wait
