@@ -156,12 +156,6 @@ if __name__ == '__main__':
         mlflow.log_metric("cv_test_mean_score", scores["test_score"].mean())
         mlflow.log_metric("cv_test_max_score", scores["test_score"].max())
 
-        # log datasets
-        df_train[X_cols+[y_col]].to_csv(f'train_{trial.number}.csv')
-        df_test[X_cols].to_csv(f'test_{trial.number}.csv')
-        mlflow.log_artifact(f'train_{trial.number}.csv','dataset')
-        mlflow.log_artifact(f'test_{trial.number}.csv','dataset')
-
         # fit and log model
         model.fit(X_train, y_train)
         mlflow.log_metric("train_score", model.score(X_train, y_train))

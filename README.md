@@ -6,13 +6,17 @@
 ```
 docker-compose up -d --build
 ```
+
 2. Adjust the provided experiment `./services/experiment/experiments/spaceship-titanic/experiment.py` or create a new one under `./services/experiment/experiments/<your-experiment-name>/experiment.py`
+
 3. When needed make some quick insights with **Jupyter**. Take a look at the `sample.ipynb` to see how to import and use artifacts from the experiment.
+
 4. Whenever required run the `experiment` container once again with
 ```
 docker-compose stop experiment
 docker-compose up -d --build
 ```
+
 5. Monitor results with mlflow and or optuna dashboard
 
 ## Todos
