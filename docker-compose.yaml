@@ -1,5 +1,9 @@
 version: '3.4'
 
+volumes:
+    db-volume: {}
+    s3-volume: {}
+
 services:
 
   db:
@@ -9,6 +13,8 @@ services:
       - POSTGRES_PASSWORD=${DB_ADMIN_PASS}
       - DB_MLOPS_PASS=${DB_MLOPS_PASS}
       - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
+    volumes:
+      - db-volume:/var/lib/postgresql/data
     networks:
       - ax
 
@@ -23,6 +29,8 @@ services:
     ports:
         - "9000:9000"
         - "9001:9001"
+    volumes:
+      - s3-volume:/data
     networks:
         - ax
 
