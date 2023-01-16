@@ -175,4 +175,4 @@ if __name__ == '__main__':
         direction = "maximize",
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
     )
-    study.optimize(objective, n_trials=100, callbacks=[mlflc])
+    study.optimize(objective, n_trials=10, callbacks=[mlflc])

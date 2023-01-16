@@ -31,5 +31,5 @@ class ColumnTransformer:
         return self
     
     def transform(self, X:DataFrame, y=None):
-        X.loc[:,self._calculated_columns] = self._transformer.transform(X.loc[:,self._calculated_columns])
+        X[self._calculated_columns] = self._transformer.transform(X.loc[:,self._calculated_columns])
         return X

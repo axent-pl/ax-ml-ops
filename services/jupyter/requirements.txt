@@ -1,0 +1,6 @@
+mlflow==2.1.1
+psycopg2-binary==2.9.5
+awscli==1.27.50
+boto3==1.26.50
+optuna==3.0.5
+catboost==1.1.1
