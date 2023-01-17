@@ -89,18 +89,6 @@ services:
     networks:
       - ax
 
-  experiment:
-    build:
-      context: services/experiment
-    environment:
-      - DB_MLOPS_PASS=${DB_MLOPS_PASS}
-      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
-      - S3_BUCKET=${S3_BUCKET}
-      - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
-      - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
-    networks:
-      - ax
-
 networks:
   ax:
     driver: bridge

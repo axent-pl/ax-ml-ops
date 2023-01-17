@@ -1,2 +1,2 @@
 #!/usr/bin/bash
-docker-compose up -d --build experiment
+docker-compose -f docker-compose.experiment.yaml up -d --build
