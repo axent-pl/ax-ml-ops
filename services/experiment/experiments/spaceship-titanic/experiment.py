@@ -54,18 +54,17 @@ class CustomPipelineUtils:
         return df
 
     def bin_columns(df):
-        cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
-        for c in cols:
-            bins = [0,2,10]
-            labels = [0,2,10]
-            df[c] = pd.cut(df[c],bins=bins,labels=labels[:-1]).astype('float64')
+        age_bins = [-1,12,18,25,30,50,800]
+        df['bin_Age'] = pd.cut(df['Age'],bins=age_bins)
+        dummies = pd.get_dummies(df['bin_Age'], prefix=f'cat_bin_Age')
+        df[list(dummies.columns)[:-1]] = dummies[list(dummies.columns)[:-1]]
         return df
     
     def add_summary_columns(df):
-        df['agr_Sum_Expenses'] = df['RoomService'] + df['FoodCourt'] + df['ShoppingMall'] + df['Spa'] + df['VRDeck']
-        df['agr_Count_Services'] = (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']]>0).T.sum().T
+        # df['agr_Sum_Expenses'] = df['RoomService'] + df['FoodCourt'] + df['ShoppingMall'] + df['Spa'] + df['VRDeck']
+        # df['agr_Count_Services'] = (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']]>0).T.sum().T
         df['agr_Count_PassengerId_Group_Name_Last'] = df.groupby(['PassengerId_Group','Name_Last']).transform('count')['PassengerId']
-        df['agr_Count_Cabin_Deck'] = df.groupby(['Cabin_Deck']).transform('count')['PassengerId']
+        # df['agr_Count_Cabin_Deck'] = df.groupby(['Cabin_Deck']).transform('count')['PassengerId']
         df['agr_Count_Cabin_Num'] = df.groupby(['Cabin_Num']).transform('count')['PassengerId']
         df['agr_Count_Cabin_Side'] = df.groupby(['Cabin_Side']).transform('count')['PassengerId']
         df['agr_Name_Last_Count'] = df.groupby('Name_Last').transform('count')[['PassengerId']]
@@ -92,10 +91,10 @@ def load_and_transform_data():
         ('astype_cat', ColumnTransformer(TypeTransformer('category'), columns=cat_cols)),
         ('add_dummies', FunctionTransformer(PipelineUtils.add_dummies, kw_args={'columns':cat_cols})),
         ('impute', ColumnTransformer(KNNImputer(), columns=num_cols+[re.compile('^cat_.*')])),
-        # ('bin_columns', FunctionTransformer(CustomPipelineUtils.bin_columns)),
-        # ('add_summary_columns', FunctionTransformer(CustomPipelineUtils.add_summary_columns)),
+        ('bin_columns', FunctionTransformer(CustomPipelineUtils.bin_columns)),
+        ('add_summary_columns', FunctionTransformer(CustomPipelineUtils.add_summary_columns)),
         ('scale_num',  ColumnTransformer(MinMaxScaler(), columns=num_cols)),
-        # ('scale_agr',  ColumnTransformer(MinMaxScaler(), columns=[re.compile('^agr_.*')]))
+        ('scale_agr',  ColumnTransformer(MinMaxScaler(), columns=[re.compile('^agr_.*')]))
     ])
 
     pipeline.fit_transform(df)
@@ -108,7 +107,7 @@ def get_xy_cols(df):
     X_col += num_cols
     X_col += [cc for cc in df.columns if cc.startswith('cat_')]
     X_col += [cc for cc in df.columns if cc.startswith('agr_')]
-    X_col = [ c for c in X_col if c not in ['Cabin_Num'] ]
+    X_col = [ c for c in X_col if c not in ['Age','Cabin_Num'] ]
     y_col = 'Transported'
     
     return X_col, y_col
@@ -164,7 +163,7 @@ if __name__ == '__main__':
         return scores["test_score"].mean()
     
     study = optuna.create_study(
-        study_name=os.path.dirname(__file__).split(os.sep)[-1],
+        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-v3',
         load_if_exists = True,
         direction = "maximize",
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
