@@ -16,16 +16,18 @@
 docker-compose up -d --build
 ```
 
-2. Adjust the provided experiment `./services/experiment/experiments/spaceship-titanic/experiment.py` or create a new one under `./services/experiment/experiments/<your-experiment-name>/experiment.py`
+2. Work on your experiment(s):
 
-3. When needed make some quick insights with **Jupyter**. Take a look at the `sample.ipynb` to see how to import and use artifacts from the experiment. The experiments ale mounted to the `jupyter` container so any changes will be visible instantly (without reloading the container).
+  * edit experiment `./services/experiment/experiments/spaceship-titanic/experiment.py` or create a new one under `./services/experiment/experiments/<your-experiment-name>/experiment.py`
 
-4. Whenever required run the `experiment` container once again with
+  * make some quick insights with **Jupyter**. Take a look at the `sample.ipynb` to see how to import and use artifacts from the experiment. The experiments ale mounted to the `jupyter` container so any changes will be visible instantly (without reloading the container)
+
+3. Run the `experiment` container with
 ```
 ./start-experiment.sh
 ```
 
-5. Monitor results with mlflow and or optuna dashboard
+4. Monitor results with **MLFlow** and or **Optuna dashboard**
 
 ## Todos
 * add wait-for-it feature
