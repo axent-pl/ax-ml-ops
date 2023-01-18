@@ -11,4 +11,3 @@ COPY experiments/ /experiments/
 
 WORKDIR /
 ENTRYPOINT "./entrypoint.sh"
-CMD [ "train.py" ]
