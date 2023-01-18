@@ -15,7 +15,7 @@ from sklearn.impute import KNNImputer
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_validate
-from catboost import CatBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 
 class PipelineUtils:
@@ -135,14 +135,15 @@ if __name__ == '__main__':
     @mlflc.track_in_mlflow()
     def objective(trial):
         params = {
-            "n_estimators": trial.suggest_int("n_estimators", 100, 5000, step = 50),
-            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 0.3, log = True),
-            "max_depth": trial.suggest_int("max_depth", 3, 9),
-            "subsample": trial.suggest_float("subsample", 0.5, 0.9, step = 0.05),
-            "verbose": False,
+            'bootstrap': trial.suggest_categorical("bootstrap", [True, False]),
+            'max_depth': trial.suggest_int("max_depth", 10, 100, step = 10),
+            'max_features': trial.suggest_categorical("max_features", ['auto', 'sqrt']),
+            'min_samples_leaf': trial.suggest_int("min_samples_leaf", 1, 12),
+            'min_samples_split': trial.suggest_int("min_samples_split", 2, 12),
+            "n_estimators": trial.suggest_int("n_estimators", 5, 2000, log = True),
             "random_state": 7
         }
-        model = CatBoostClassifier(**params)
+        model = RandomForestClassifier(**params)
 
         kf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 7)
         scores = cross_validate(model, X_train, y_train, cv = kf, scoring = "accuracy", n_jobs = -1, return_train_score=True)
@@ -158,12 +159,12 @@ if __name__ == '__main__':
         # fit and log model
         model.fit(X_train, y_train)
         mlflow.log_metric("train_score", model.score(X_train, y_train))
-        mlflow.catboost.log_model(model, 'model')
+        mlflow.sklearn.log_model(model, 'model')
 
         return scores["test_score"].mean()
     
     study = optuna.create_study(
-        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-CatBoostClassifier',
+        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-RandomForestClassifier',
         load_if_exists = True,
         direction = "maximize",
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
