@@ -3,20 +3,13 @@ import re
 import numpy as np
 import pandas as pd
 
-from axent.column_transformer import ColumnTransformer
-from axent.type_transformer import TypeTransformer
-
-import mlflow
-import optuna
-from optuna.integration.mlflow import MLflowCallback
-
 from typing import List
 from sklearn.impute import KNNImputer
 from sklearn.preprocessing import FunctionTransformer, MinMaxScaler
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import StratifiedKFold, cross_validate
-from catboost import CatBoostClassifier
 
+from axent.column_transformer import ColumnTransformer
+from axent.type_transformer import TypeTransformer
 
 class PipelineUtils:
 
@@ -61,14 +54,11 @@ class CustomPipelineUtils:
         return df
     
     def add_summary_columns(df):
-        # df['agr_Sum_Expenses'] = df['RoomService'] + df['FoodCourt'] + df['ShoppingMall'] + df['Spa'] + df['VRDeck']
-        # df['agr_Count_Services'] = (df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']]>0).T.sum().T
-        df['agr_Count_PassengerId_Group_Name_Last'] = df.groupby(['PassengerId_Group','Name_Last']).transform('count')['PassengerId'].fillna(0.0)
-        # df['agr_Count_Cabin_Deck'] = df.groupby(['Cabin_Deck']).transform('count')['PassengerId']
         df['agr_Count_Cabin_Num'] = df.groupby(['Cabin_Num']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Count_Cabin_Side'] = df.groupby(['Cabin_Side']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Name_Last_Count'] = df.groupby('Name_Last').transform('count')[['PassengerId']].fillna(0.0)
-        df['agr_Name_First_Count'] = df.groupby('Name_First').transform('count')[['PassengerId']].fillna(0.0)
+        df['agr_Count_PassengerId_Group_Name_Last'] = df.groupby(['PassengerId_Group','Name_Last']).transform('count')['PassengerId'].fillna(0.0)
+        df['agr_Alone'] = 0
+        df.loc[df['agr_Count_PassengerId_Group_Name_Last']<2,'agr_Alone'] = 1
+        df.drop(columns=['agr_Count_PassengerId_Group_Name_Last'], inplace=True)
         return df
 
 cat_cols = ['HomePlanet','CryoSleep','Destination','VIP','Cabin_Deck','Cabin_Side','PassengerId_Number']
@@ -121,51 +111,3 @@ def get_xy(df):
     else:
         y = None
     return X, y
-
-
-if __name__ == '__main__':
-    mlflc = MLflowCallback(
-        metric_name="accuracy",
-    )
-
-    df_train, df_test = load_and_transform_data()
-    X_train, y_train = get_xy(df_train)
-    X_cols, y_col = get_xy_cols(df_train)
-
-    @mlflc.track_in_mlflow()
-    def objective(trial):
-        params = {
-            "n_estimators": trial.suggest_int("n_estimators", 100, 5000, step = 50),
-            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 0.3, log = True),
-            "max_depth": trial.suggest_int("max_depth", 3, 9),
-            "subsample": trial.suggest_float("subsample", 0.5, 0.9, step = 0.05),
-            "verbose": False,
-            "random_state": 7
-        }
-        model = CatBoostClassifier(**params)
-
-        kf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 7)
-        scores = cross_validate(model, X_train, y_train, cv = kf, scoring = "accuracy", n_jobs = -1, return_train_score=True)
-        
-        mlflow.log_metric("cv_train_min_score", scores["train_score"].min())
-        mlflow.log_metric("cv_train_mean_score", scores["train_score"].mean())
-        mlflow.log_metric("cv_train_max", scores["train_score"].max())
-
-        mlflow.log_metric("cv_test_min_score", scores["test_score"].min())
-        mlflow.log_metric("cv_test_mean_score", scores["test_score"].mean())
-        mlflow.log_metric("cv_test_max_score", scores["test_score"].max())
-
-        # fit and log model
-        model.fit(X_train, y_train)
-        mlflow.log_metric("train_score", model.score(X_train, y_train))
-        mlflow.catboost.log_model(model, 'model')
-
-        return scores["test_score"].mean()
-    
-    study = optuna.create_study(
-        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-CatBoostClassifier',
-        load_if_exists = True,
-        direction = "maximize",
-        storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
-    )
-    study.optimize(objective, n_trials=10, callbacks=[mlflc])

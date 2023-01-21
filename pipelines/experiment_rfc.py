@@ -6,9 +6,9 @@ from optuna.integration.mlflow import MLflowCallback
 from sklearn.model_selection import StratifiedKFold, cross_validate
 from sklearn.ensemble import RandomForestClassifier
 
-from common import get_xy, get_xy_cols, load_and_transform_data
+from common.data import get_xy, get_xy_cols, load_and_transform_data
 
-if __name__ == '__main__':
+def run():
     mlflc = MLflowCallback(
         metric_name="accuracy",
     )
@@ -53,3 +53,4 @@ if __name__ == '__main__':
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
     )
     study.optimize(objective, n_trials=20, callbacks=[mlflc])
+    return study.best_params

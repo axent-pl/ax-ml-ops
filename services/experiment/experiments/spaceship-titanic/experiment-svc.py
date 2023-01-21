@@ -4,7 +4,10 @@ import mlflow
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 from sklearn.model_selection import StratifiedKFold, cross_validate
-from sklearn.ensemble import RandomForestClassifier
+import mlflow
+import optuna
+from optuna.integration.mlflow import MLflowCallback
+from sklearn.svm import SVC
 
 from common import get_xy, get_xy_cols, load_and_transform_data
 
@@ -20,14 +23,11 @@ if __name__ == '__main__':
     @mlflc.track_in_mlflow()
     def objective(trial):
         params = {
-            'bootstrap': trial.suggest_categorical("bootstrap", [True, False]),
-            'max_depth': trial.suggest_int("max_depth", 10, 100, step = 10),
-            'min_samples_leaf': trial.suggest_int("min_samples_leaf", 1, 12),
-            'min_samples_split': trial.suggest_int("min_samples_split", 2, 12),
-            "n_estimators": trial.suggest_int("n_estimators", 5, 2000, log = True),
+            "C": trial.suggest_float("C", 0.1, 1000, log = True),
+            "gamma": trial.suggest_float("gamma", 0.0001, 1),
             "random_state": 7
         }
-        model = RandomForestClassifier(**params)
+        model = SVC(**params)
 
         kf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 7)
         scores = cross_validate(model, X_train, y_train, cv = kf, scoring = "accuracy", n_jobs = -1, return_train_score=True)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         return scores["test_score"].mean()
     
     study = optuna.create_study(
-        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-RandomForestClassifier',
+        study_name=os.path.dirname(__file__).split(os.sep)[-1]+'-SVC',
         load_if_exists = True,
         direction = "maximize",
         storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
