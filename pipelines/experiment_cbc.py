@@ -57,3 +57,6 @@ def run():
     )
     study.optimize(objective, n_trials=20, callbacks=[mlflc])
     return study.best_params
+
+if __name__ == '__main__':
+    run()

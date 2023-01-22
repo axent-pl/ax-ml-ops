@@ -11,6 +11,7 @@ ENV AIRFLOW_HOME=/home/airflow
 
 COPY --chown=airflow:airflow requirements.txt /home/airflow/
 RUN pip install -r requirements.txt
+RUN pip install Redis
 
 COPY --chown=airflow:airflow entrypoint.sh /home/airflow/
 

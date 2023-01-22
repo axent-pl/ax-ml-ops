@@ -11,16 +11,30 @@ export AIRFLOW__DATABASE__SQL_ALCHEMY_SCHEMA="public"
 export AIRFLOW__CORE__LOAD_EXAMPLES=False
 export AIRFLOW__CORE__DAGS_FOLDER=/home/airflow/pipelines
 export PATH=/home/airflow/.local/bin:$PATH
+export AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+export AIRFLOW__CELERY__BROKER_URL="amqp://${MQ_USER}:${MQ_PASS}@${MQ_HOST}/"
 
 until airflow db check; do echo "[INFO ]: Waiting for database"; sleep 5; done;
-airflow db init
-airflow users create \
-    -u ${AF_USER} \
-    -f Air \
-    -l Flow \
-    -p ${AF_PASS} \
-    -r Admin \
-    -e airlow@axent.pl
-airflow scheduler &
-airflow webserver --port 8080 &
-wait
+
+if [[ "$1" == "scheduler" ]];
+then
+    echo "[INFO ]: Starting airflow scheduler";
+    airflow scheduler
+elif [[ "$1" == "worker" ]];
+then
+    echo "[INFO ]: Starting airflow celery worker";
+    airflow celery worker
+else
+    echo "[INFO ]: Initializing database";
+    airflow db init
+    echo "[INFO ]: Configuring user";
+    airflow users create \
+        -u ${AF_USER} \
+        -f Air \
+        -l Flow \
+        -p ${AF_PASS} \
+        -r Admin \
+        -e airlow@axent.pl
+    echo "[INFO ]: Starting airflow webserver";
+    airflow webserver --port 8080
+fi

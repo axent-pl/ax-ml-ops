@@ -3,6 +3,7 @@ version: '3.4'
 volumes:
   db-volume: {}
   s3-volume: {}
+  af-volume: {}
 
 services:
 
@@ -22,6 +23,15 @@ services:
       - DB_OPTUNA_NAME=${DB_OPTUNA_NAME}
     volumes:
       - db-volume:/var/lib/postgresql/data
+    networks:
+      - ax
+
+  mq:
+    build:
+      context: services/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${MQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${MQ_PASS}
     networks:
       - ax
 
@@ -82,6 +92,9 @@ services:
     environment:
       - AF_USER=${AF_USER}
       - AF_PASS=${AF_PASS}
+      - MQ_HOST=mq
+      - MQ_USER=${MQ_USER}
+      - MQ_PASS=${MQ_PASS}
       - MLFLOW_HOST=mlflow
       - MLFLOW_PORT=5000
       - DB_HOST=db
@@ -103,6 +116,76 @@ services:
       - ./pipelines:/home/airflow/pipelines
     ports:
       - 8000:8080
+    networks:
+      - ax
+
+  airflow-scheduler:
+    build:
+      context: services/airflow
+      args:
+      - UID=${UID}
+      - GID=${GID}
+    command: "scheduler"
+    environment:
+      - AF_USER=${AF_USER}
+      - AF_PASS=${AF_PASS}
+      - MQ_HOST=mq
+      - MQ_USER=${MQ_USER}
+      - MQ_PASS=${MQ_PASS}
+      - MLFLOW_HOST=mlflow
+      - MLFLOW_PORT=5000
+      - DB_HOST=db
+      - DB_AIRFLOW_USER=${DB_AIRFLOW_USER}
+      - DB_AIRFLOW_PASS=${DB_AIRFLOW_PASS}
+      - DB_AIRFLOW_NAME=${DB_AIRFLOW_NAME}
+      - DB_MLFLOW_USER=${DB_MLFLOW_USER}
+      - DB_MLFLOW_PASS=${DB_MLFLOW_PASS}
+      - DB_MLFLOW_NAME=${DB_MLFLOW_NAME}
+      - DB_OPTUNA_USER=${DB_OPTUNA_USER}
+      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
+      - DB_OPTUNA_NAME=${DB_OPTUNA_NAME}
+      - S3_HOST=s3
+      - S3_PORT=9000
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
+      - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
+    volumes:
+      - ./pipelines:/home/airflow/pipelines
+    networks:
+      - ax
+
+  airflow-worker:
+    build:
+      context: services/airflow
+      args:
+      - UID=${UID}
+      - GID=${GID}
+    command: "worker"
+    environment:
+      - AF_USER=${AF_USER}
+      - AF_PASS=${AF_PASS}
+      - MQ_HOST=mq
+      - MQ_USER=${MQ_USER}
+      - MQ_PASS=${MQ_PASS}
+      - MLFLOW_HOST=mlflow
+      - MLFLOW_PORT=5000
+      - DB_HOST=db
+      - DB_AIRFLOW_USER=${DB_AIRFLOW_USER}
+      - DB_AIRFLOW_PASS=${DB_AIRFLOW_PASS}
+      - DB_AIRFLOW_NAME=${DB_AIRFLOW_NAME}
+      - DB_MLFLOW_USER=${DB_MLFLOW_USER}
+      - DB_MLFLOW_PASS=${DB_MLFLOW_PASS}
+      - DB_MLFLOW_NAME=${DB_MLFLOW_NAME}
+      - DB_OPTUNA_USER=${DB_OPTUNA_USER}
+      - DB_OPTUNA_PASS=${DB_OPTUNA_PASS}
+      - DB_OPTUNA_NAME=${DB_OPTUNA_NAME}
+      - S3_HOST=s3
+      - S3_PORT=9000
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_AUTH_KEY_ID=${S3_AUTH_KEY_ID}
+      - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
+    volumes:
+      - ./pipelines:/home/airflow/pipelines
     networks:
       - ax
 
