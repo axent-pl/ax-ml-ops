@@ -220,8 +220,7 @@ services:
     ports:
       - 8800:8888
     volumes:
-      - ./services/experiment/experiments:/home/jovyan/experiments:ro
-      - ./services/experiment/packages:/home/jovyan/packages:ro
+      - ./pipelines:/home/jovyan/pipelines:ro
     networks:
       - ax
 

@@ -4,10 +4,10 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
-from experiment_cbc import run as train_cbc
-from experiment_rfc import run as train_rfc
-from experiment_svc import run as train_svc
-from common.data import run as prepare_data
+from kaggle_spaceship_titanic.task_train_cbc import run as train_cbc
+from kaggle_spaceship_titanic.task_train_rfc import run as train_rfc
+from kaggle_spaceship_titanic.task_train_svc import run as train_svc
+from kaggle_spaceship_titanic.data import run as prepare_data
 
 with DAG(
     "kaggle-spaceship-titanic",
@@ -25,6 +25,11 @@ with DAG(
     catchup=False
 ) as dag:
 
+    prepare_data_task = PythonOperator(
+        task_id="prepare_data",
+        python_callable=prepare_data,
+    )
+
     train_cbc_task = PythonOperator(
         task_id="train_cbc",
         python_callable=train_cbc,
@@ -38,11 +43,6 @@ with DAG(
     train_svc_task = PythonOperator(
         task_id="train_svc",
         python_callable=train_svc,
-    )
-
-    prepare_data_task = PythonOperator(
-        task_id="prepare_data",
-        python_callable=prepare_data,
     )
 
     prepare_data_task >> [train_cbc_task, train_rfc_task, train_svc_task]

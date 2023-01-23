@@ -9,7 +9,7 @@ import optuna
 from optuna.integration.mlflow import MLflowCallback
 from sklearn.svm import SVC
 
-from common.data import get_xy, get_xy_cols, load_and_transform_data
+from .data import get_xy, get_xy_cols, load_and_transform_data
 
 def run():
     mlflc = MLflowCallback(
