@@ -9,5 +9,5 @@ awscli==1.27.50
 boto3==1.26.50
 optuna==3.0.5
 catboost==1.1.1
-
+apache-airflow[celery]==2.5.1
 

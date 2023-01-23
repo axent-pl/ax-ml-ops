@@ -13,12 +13,12 @@
 
 1. Start **ax-ml-ops** application stack with
 ```
-docker-compose up -d --build
+./stack-up.sh
 ```
 
 2. Work on your experiment(s):
 
-  * edit experiment `./services/experiment/experiments/spaceship-titanic/experiment.py` or create a new one under `./services/experiment/experiments/<your-experiment-name>/experiment.py`
+  * edit experiment `./pipelines/kaggle-spaceship-titanic` or create a new one under `./services/experiment/experiments/<your-experiment-name>/experiment.py`
 
   * make some quick insights with **Jupyter**. Take a look at the `sample.ipynb` to see how to import and use artifacts from the experiment. The experiments ale mounted to the `jupyter` container so any changes will be visible instantly (without reloading the container)
 
