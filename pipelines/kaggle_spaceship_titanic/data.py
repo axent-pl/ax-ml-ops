@@ -23,6 +23,12 @@ class PipelineUtils:
                 df.loc[(df[c].isnull()),list(dummies.columns)] = np.nan
         return df
 
+    def del_dummies(df, columns: List[str]):
+        for c in columns:
+            dummies = pd.get_dummies(df[c], prefix=f'cat_{c}', drop_first=False)
+            new_columns += list(dummies.columns)
+            df.drop(new_columns, axis=1, inplace=True)
+        return df
 
 class CustomPipelineUtils:
     
@@ -35,10 +41,8 @@ class CustomPipelineUtils:
     def fillna_insights(df):
         df['VIP'] = df['VIP'].astype('str').replace('nan',np.nan)
         df['CryoSleep'] = df['CryoSleep'].astype('str').replace('nan',np.nan)
-
-        # Sleepers and passengers under 13 do not spend money
-        for c in ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']:
-            df.loc[(df['CryoSleep']==True) | (df['Age']<13), c] = 0.0
+        df['_Paid_Services'] = 'True'
+        df.loc[df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1) == 0, '_Paid_Services'] = 'False'
 
         # From axent tool        
         df.loc[df.query("`Cabin_Deck` == 'A'").index, "HomePlanet"] = "Europa"
@@ -48,13 +52,27 @@ class CustomPipelineUtils:
         df.loc[df.query("`Cabin_Deck` == 'T'").index, "HomePlanet"] = "Europa"
         df.loc[df.query("`HomePlanet` == 'Earth'").index, "VIP"] = "False"
         df.loc[df.query("`Cabin_Deck` == 'T'").index, "CryoSleep"] = "False"
+        df.loc[df.query("`_Paid_Services` == 'True'").index, "CryoSleep"] = "False"
         df.loc[df.query("`Destination` == 'PSO J318.5-22' and `Cabin_Deck` == 'D'").index, "HomePlanet"] = "Mars"
         df.loc[df.query("`Destination` == '55 Cancri e' and `VIP` == 'True'").index, "HomePlanet"] = "Europa"
         df.loc[df.query("`HomePlanet` == 'Mars' and `Destination` == '55 Cancri e'").index, "VIP"] = "False"
         df.loc[df.query("`Cabin_Deck` == 'F' and `VIP` == 'True'").index, "HomePlanet"] = "Mars"
         df.loc[df.query("`HomePlanet` == 'Mars' and `CryoSleep` == 'True'").index, "VIP"] = "False"
         df.loc[df.query("`Destination` == '55 Cancri e' and `Cabin_Deck` == 'F'").index, "VIP"] = "False"
+        df.loc[df.query("`Cabin_Deck` == 'F' and `_Paid_Services` == 'False'").index, "VIP"] = "False"
+        df.loc[df.query("`HomePlanet` == 'Mars' and `Destination` == 'PSO J318.5-22' and `_Paid_Services` == 'False'").index, "CryoSleep"] = "True"
         df.loc[df.query("`HomePlanet` == 'Europa' and `Cabin_Deck` == 'E' and `Cabin_Side` == 'P'").index, "VIP"] = "False"
+        df.loc[df.query("`HomePlanet` == 'Europa' and `Cabin_Deck` == 'E' and `Cabin_Side` == 'P' and `_Paid_Services` == 'False'").index, "CryoSleep"] = "True"
+        df.loc[df.query("`Destination` == '55 Cancri e' and `Cabin_Deck` == 'C' and `Cabin_Side` == 'P' and `CryoSleep` == 'True'").index, "VIP"] = "False"
+        df.loc[df.query("`Destination` == 'TRAPPIST-1e' and `Cabin_Deck` == 'B' and `Cabin_Side` == 'S' and `CryoSleep` == 'True'").index, "VIP"] = "False"
+        df.loc[df.query("`Cabin_Deck` == 'B' and `Cabin_Side` == 'P' and `CryoSleep` == 'False' and `_Paid_Services` == 'False'").index, "Destination"] = "TRAPPIST-1e"
+        df.loc[df.query("`Cabin_Deck` == 'C' and `Cabin_Side` == 'P' and `CryoSleep` == 'False' and `_Paid_Services` == 'False'").index, "Destination"] = "TRAPPIST-1e"
+        df.loc[df.query("`Destination` == '55 Cancri e' and `Cabin_Deck` == 'A' and `Cabin_Side` == 'S' and `_Paid_Services` == 'False'").index, "CryoSleep"] = "True"
+        df.loc[df.query("`Destination` == '55 Cancri e' and `Cabin_Deck` == 'B' and `Cabin_Side` == 'P' and `_Paid_Services` == 'False'").index, "CryoSleep"] = "True"
+        df.loc[df.query("`Destination` == '55 Cancri e' and `Cabin_Deck` == 'C' and `Cabin_Side` == 'P' and `_Paid_Services` == 'False'").index, "CryoSleep"] = "True"
+
+        for c in ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']:
+            df.loc[df['_Paid_Services']=='False', c] = 0.0
 
         # HomePlanet and Cabin_Side can be deducted from PassengerId_Group
         for val in df[df['HomePlanet'].isna()]['PassengerId_Group']:
@@ -74,6 +92,23 @@ class CustomPipelineUtils:
 
         return df
                 
+    def fillna_after_impute(df):
+        cd_cols = [ c for c in df.columns if c.startswith('cat_Cabin_Deck_') ]
+        df['_Cabin_Deck'] = df['Cabin_Deck']
+        df.loc[df['Cabin'].isna(), '_Cabin_Deck'] = df[cd_cols].idxmax(axis=1).str.replace('cat_Cabin_Deck_','')
+
+        cd_cols = [ c for c in df.columns if c.startswith('cat_Cabin_Side_') ]
+        df['_Cabin_Side'] = df['Cabin_Side']
+        df.loc[df['Cabin'].isna(), '_Cabin_Side'] = df[cd_cols].idxmax(axis=1).str.replace('cat_Cabin_Side_','')
+
+        df['_Cabin_Deck_Side'] = df['_Cabin_Deck'].astype('str') + "/" + df['_Cabin_Side'].astype('str')
+        for cds in df['_Cabin_Deck_Side'].unique():
+            df_slice = df[df['_Cabin_Deck_Side']==cds]
+            a,b = np.polyfit(df_slice['PassengerId_Group'], df_slice['Cabin_Num'], deg=1)
+            df.loc[(df['_Cabin_Deck_Side']==cds) & (df['Cabin'].isna()), 'Cabin_Num'] = a * df['PassengerId_Group'] + b
+
+        return df
+
     def log_scale(df):
         cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
         for c in cols:
@@ -87,20 +122,16 @@ class CustomPipelineUtils:
         return df
 
     def bin_columns(df):
-        df = CustomPipelineUtils._bin_column(df, 'Age', [0,12,25,800])
-        # df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
+        df = CustomPipelineUtils._bin_column(df, 'Age', [0,12,20,45,800])
+        df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
         # df = CustomPipelineUtils._bin_column(df, 'PassengerId_Group', list(range(0,12000,1000)))
         return df
     
     def add_summary_columns(df):
         # df['agr_Count_Cabin_Num'] = df.groupby(['Cabin_Num']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Sum_Expenses'] = df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1)
-        df['agr_Count_PassengerId_Group'] = df.groupby(['PassengerId_Group']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Count_PassengerId_Group_Name_Last'] = df.groupby(['PassengerId_Group','Name_Last']).transform('count')['PassengerId'].fillna(0.0)
-        # is alone
-        df['agr_Alone'] = 0
-        df.loc[df['agr_Count_PassengerId_Group_Name_Last']<2,'agr_Alone'] = 1
-        df.drop(columns=['agr_Count_PassengerId_Group_Name_Last'], inplace=True)
+        # df['agr_Sum_Expenses'] = df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1)
+        # df['agr_Count_PassengerId_Group'] = df.groupby(['PassengerId_Group']).transform('count')['PassengerId'].fillna(0.0)
+        # df['agr_Count_Name_Last'] = df.groupby(['Name_Last']).transform('count')['PassengerId'].fillna(0.0)
         return df
 
 cat_cols = ['HomePlanet','CryoSleep','Destination','VIP','Cabin_Deck','Cabin_Side']
@@ -119,13 +150,14 @@ def load_and_transform_data():
         ('split', FunctionTransformer(CustomPipelineUtils.add_split_columns)),
         ('fillna_insights', FunctionTransformer(CustomPipelineUtils.fillna_insights)),
         ('astype_num', ColumnTransformer(TypeTransformer('float64'), columns=num_cols)),
-        # ('log_scale', FunctionTransformer(CustomPipelineUtils.log_scale)),
+        ('log_scale', FunctionTransformer(CustomPipelineUtils.log_scale)),
         ('astype_cat', ColumnTransformer(TypeTransformer('category'), columns=cat_cols)),
         ('add_dummies', FunctionTransformer(PipelineUtils.add_dummies, kw_args={'columns':cat_cols, 'drop_first':False})),
-        ('impute', ColumnTransformer(KNNImputer(), columns=num_cols+[re.compile('^cat_.*')])),
+        ('impute', ColumnTransformer(KNNImputer(weights='distance'), columns=num_cols+[re.compile('^cat_.*')])),
+        ('fillna_after_impute', FunctionTransformer(CustomPipelineUtils.fillna_after_impute)),
         ('add_summary_columns', FunctionTransformer(CustomPipelineUtils.add_summary_columns)),
         ('bin_columns', FunctionTransformer(CustomPipelineUtils.bin_columns)),
-        # ('scale_num',  ColumnTransformer(MinMaxScaler(), columns=num_cols)),
+        ('scale_num',  ColumnTransformer(MinMaxScaler(), columns=num_cols)),
         # ('scale_agr',  ColumnTransformer(MinMaxScaler(), columns=[re.compile('^agr_.*')]))
     ])
 
@@ -139,7 +171,7 @@ def get_xy_cols(df):
     X_col += num_cols
     X_col += [cc for cc in df.columns if cc.startswith('cat_')]
     X_col += [cc for cc in df.columns if cc.startswith('agr_')]
-    X_col = [ c for c in X_col if not c.startswith('cat_VIP') ]
+    X_col = [ c for c in X_col if c not in ['cat_Cabin_Deck_T', 'cat_Cabin_Side_S', 'cat_VIP_True', 'cat_Destination_TRAPPIST-1e', 'cat_CryoSleep_True', 'cat_HomePlanet_Mars', 'cat_bin_Cabin_Num_[0, 300)'] ]
     y_col = 'Transported'
     
     return X_col, y_col
@@ -153,6 +185,7 @@ def get_xy(df):
     else:
         y = None
     return X, y
+
 
 def run():
     return [os.path.dirname(__file__)+'/train.csv', os.path.dirname(__file__)+'/test.csv']

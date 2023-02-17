@@ -25,6 +25,9 @@ with DAG(
     catchup=False
 ) as dag:
 
+    version = 'v1'
+    n_trials = 10
+
     prepare_data_task = PythonOperator(
         task_id="prepare_data",
         python_callable=prepare_data,
@@ -33,16 +36,19 @@ with DAG(
     train_cbc_task = PythonOperator(
         task_id="train_cbc",
         python_callable=train_cbc,
+        op_kwargs={'task_name':f'kaggle-cbc-{version}', 'n_trials': n_trials}
     )
 
     train_rfc_task = PythonOperator(
         task_id="train_rfc",
         python_callable=train_rfc,
+        op_kwargs={'task_name':f'kaggle-rfc-{version}', 'n_trials': n_trials}
     )
 
     train_svc_task = PythonOperator(
         task_id="train_svc",
         python_callable=train_svc,
+        op_kwargs={'task_name':f'kaggle-svc-{version}', 'n_trials': n_trials}
     )
 
     prepare_data_task >> [train_cbc_task, train_rfc_task, train_svc_task]
