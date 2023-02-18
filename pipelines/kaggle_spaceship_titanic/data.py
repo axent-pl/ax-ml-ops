@@ -1,6 +1,7 @@
 import os
 import re
 import numpy as np
+from numpy import ndarray
 import pandas as pd
 
 from typing import List
@@ -10,6 +11,7 @@ from sklearn.pipeline import Pipeline
 
 from .column_transformer import ColumnTransformer
 from .type_transformer import TypeTransformer
+from .common_data import TrainTestDataProvider
 
 class PipelineUtils:
 
@@ -163,7 +165,8 @@ def load_and_transform_data():
 
     pipeline.fit_transform(df)
     
-    return df[df['train']==1], df[df['train']==0].copy()
+    return df
+    #[df['train']==1], df[df['train']==0].copy()
 
 
 def get_xy_cols(df):
@@ -189,3 +192,27 @@ def get_xy(df):
 
 def run():
     return [os.path.dirname(__file__)+'/train.csv', os.path.dirname(__file__)+'/test.csv']
+
+
+class KaggleSpaceshipTitanicDataProvider(TrainTestDataProvider):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._train_query = '`train` == 1'
+        self._test_query = '`train` == 0'
+        self._y_columns = 'Transported'
+
+    def _load(self) -> None:
+        self._df = load_and_transform_data()
+        return super()._load()
+
+    def get_x_columns(self) -> List[str]:
+        X_col = []
+        X_col += num_cols
+        X_col += [cc for cc in self._df.columns if cc.startswith('cat_')]
+        X_col += [cc for cc in self._df.columns if cc.startswith('agr_')]
+        X_col = [ c for c in X_col if c not in ['cat_Cabin_Deck_T', 'cat_Cabin_Side_S', 'cat_VIP_True', 'cat_Destination_TRAPPIST-1e', 'cat_CryoSleep_True', 'cat_HomePlanet_Mars', 'cat_bin_Cabin_Num_[0, 300)'] ]
+        return X_col
+
+    def get_y_train(self) -> ndarray:
+        return self._get_df().query(self._train_query)[self.get_y_columns()].astype('int').to_numpy()

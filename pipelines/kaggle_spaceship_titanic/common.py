@@ -3,23 +3,28 @@ import mlflow
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 from sklearn.model_selection import StratifiedKFold, cross_validate
-
+from .common_model import ModelClass, ModelFactory
+from .common_data import TrainTestDataProvider
 
 def model_hyperparameter_tuning_task(
     task_name: str,
-    model_provider,
-    x_train,
-    y_train,
+    model_class: ModelClass,
+    data_provider: TrainTestDataProvider,
     n_trials: int = 100,
+    n_splits: int = 5,
     scoring: str = 'accuracy',
-    direction = 'maximize'
+    direction = 'maximize',
+    *args,
+    **kwargs
 ):
     mlflc = MLflowCallback(metric_name=scoring)
 
     @mlflc.track_in_mlflow()
     def objective(trial):
-        model = model_provider(trial)
-        kf = StratifiedKFold(n_splits = 5, shuffle = True, random_state = 7)
+        model = ModelFactory.get(model_class, trial=trial)
+        kf = StratifiedKFold(n_splits = n_splits, shuffle = True, random_state = 7)
+        x_train = data_provider.get_x_train()
+        y_train = data_provider.get_y_train()
         scores = cross_validate(model, x_train, y_train, cv = kf, scoring = scoring, n_jobs = -1, return_train_score=True)
         mlflow.log_metric(f"train_min_{scoring}", scores["train_score"].min())
         mlflow.log_metric(f"train_mean_{scoring}", scores["train_score"].mean())
