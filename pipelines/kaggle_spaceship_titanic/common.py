@@ -3,10 +3,12 @@ import mlflow
 import optuna
 from optuna.integration.mlflow import MLflowCallback
 from sklearn.model_selection import StratifiedKFold, cross_validate
+from airflow.models.taskinstance import TaskInstance
 from .common_model import ModelClass, ModelFactory
 from .common_data import TrainTestDataProvider
 
 def model_hyperparameter_tuning_task(
+    ti: TaskInstance,
     task_name: str,
     model_class: ModelClass,
     data_provider: TrainTestDataProvider,

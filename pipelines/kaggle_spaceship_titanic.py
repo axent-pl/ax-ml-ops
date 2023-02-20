@@ -15,7 +15,7 @@ with DAG(
     catchup=False
 ) as dag:
 
-    version = 'v1'
+    version = 'v5'
     n_trials = 10
 
     prepare_data_task = PythonOperator(

@@ -2,11 +2,13 @@ from enum import Enum
 from catboost import CatBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 
 class ModelClass(Enum):
     CBC = 'CatBoostClassifier'
     RFC = 'RandomForestClassifier'
     SVC = 'SVC'
+    LRC = 'LogisticRegression'
 
 class ModelFactory:
 
@@ -52,6 +54,18 @@ class ModelFactory:
             _params = params
         return SVC(**_params)
 
+    def _get_lrc(trial, params):
+        _params = {}
+        if trial:
+            _params = {
+                "C": trial.suggest_float("C", 0.1, 100, log = True),
+                "max_iter": trial.suggest_int("max_iter", 5, 500),
+                "random_state": 7
+            }
+        else:
+            _params = params
+        return LogisticRegression(**_params)
+
     def get(model_class: ModelClass, trial = None, params = None):
         if model_class == ModelClass.CBC:
             return ModelFactory._get_cbc(trial, params)
@@ -59,5 +73,7 @@ class ModelFactory:
             return ModelFactory._get_rfc(trial, params)
         if model_class == ModelClass.SVC:
             return ModelFactory._get_svc(trial, params)
-        
+        if model_class == ModelClass.LRC:
+            return ModelFactory._get_lrc(trial, params)
+
         raise Exception('Unsupported model class')
