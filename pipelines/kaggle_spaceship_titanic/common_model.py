@@ -3,12 +3,14 @@ from catboost import CatBoostClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import StratifiedKFold, cross_validate
 
 class ModelClass(Enum):
     CBC = 'CatBoostClassifier'
     RFC = 'RandomForestClassifier'
     SVC = 'SVC'
     LRC = 'LogisticRegression'
+
 
 class ModelFactory:
 
@@ -77,3 +79,11 @@ class ModelFactory:
             return ModelFactory._get_lrc(trial, params)
 
         raise Exception('Unsupported model class')
+
+
+class ModelTrain:
+
+    def get_cv_scores(model_class: ModelClass, x, y, trial = None, params = None, n_splits:int = 5, scoring:str = 'accuracy',):
+        model = ModelFactory.get(model_class, trial=trial, params=params)
+        kf = StratifiedKFold(n_splits = n_splits, shuffle = True, random_state = 7)
+        return cross_validate(model, x, y, cv = kf, scoring = scoring, n_jobs = -1, return_train_score=True)

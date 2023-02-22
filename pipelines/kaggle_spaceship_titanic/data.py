@@ -1,5 +1,7 @@
 import os
 import re
+from io import StringIO
+import boto3
 import numpy as np
 from numpy import ndarray
 import pandas as pd
@@ -10,8 +12,8 @@ from sklearn.impute import KNNImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler
 from sklearn.pipeline import Pipeline
 
-from .column_transformer import ColumnTransformer
-from .type_transformer import TypeTransformer
+from .common.transformer.column_transformer import ColumnTransformer
+from .common.transformer.type_transformer import TypeTransformer
 from .common_data import TrainTestDataProvider
 
 class PipelineUtils:
@@ -35,59 +37,59 @@ class PipelineUtils:
 
 class CustomPipelineUtils:
     
-    def add_split_columns(df):
+    def add_columns(df):
         df[['PassengerId_Group','PassengerId_Number']] = df['PassengerId'].str.split('_', expand=True)
         df[['Cabin_Deck','Cabin_Num','Cabin_Side']] = df['Cabin'].str.split('/', expand=True)
         df[['Name_First','Name_Last']] = df['Name'].str.split(' ', expand=True)
+
+        exp_cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
+        df['Spending'] = (df[exp_cols].max(axis=1) > 0)
+        df['Spending'] = df['Spending'].astype(float)
+        for c in exp_cols:
+            df.loc[(df[c].isna()) & (df['Spending'] == 0), 'Spending'] = np.nan
+
+        return df
+
+    def fillna_data_mining(df, x_columns, y_column, min_support):
+        cols = x_columns
+        col = y_column
+
+        # extracting rules with min_support
+        df_rules = df[cols+[col]]\
+            .dropna(subset=list(cols), how='any')\
+            .groupby(cols)[[col]]\
+            .agg(nunique=(col,'nunique'),support=(col,'count'),val=(col,'last'))\
+            .reset_index()\
+            .query(f'nunique == 1 and support >= {min_support}')\
+            .copy()
+        df_rules.rename(columns={'val':f'{col}_val'}, inplace=True)
+        df_rules.drop(['nunique','support'], axis=1, inplace=True)
+
+        # if rules can be applied than apply
+        to_be_filled_count = df[df[col].isna()]\
+            .merge(df_rules, how='inner', on=cols)\
+            .dropna(subset=list(cols), how='any')\
+            .shape[0]
+
+        if to_be_filled_count > 0:
+            df = df.merge(df_rules, how='outer', on=cols).copy()
+            df.loc[(df[col].isna()) & (df[f'{col}_val'].notna()), col] = df[f'{col}_val']
+            df.drop(f'{col}_val', axis=1, inplace=True)
+            print(cols, col, to_be_filled_count)
+        
         return df
 
     def fillna_rules(df):
-        def dict_to_query(df, d):
-            predicates = []
-            for c in d:
-                if str(df[c].dtype).startswith('float'):
-                    predicates.append(f"`{c}` == {d[c]}")
-                else:
-                    predicates.append(f"`{c}` == '{d[c]}'")
-            return ' and '.join(predicates)
+        all_x_columns = ['HomePlanet', 'CryoSleep', 'Destination', 'Age', 'VIP', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', 'Spending', 'PassengerId_Group', 'Name_Last']
+        all_y_columns = ['HomePlanet', 'CryoSleep', 'Destination', 'Age', 'VIP', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', 'Spending']
+        min_support = 2
 
-        def generate_rules(studied_columns, n):
-            rules = []
-            for _combination in combinations(studied_columns,n):
-                for i in range(n):
-                    col = _combination[i]
-                    cols = list(_combination)
-                    cols.remove(col)
-                    df_base = df.dropna(subset=list(_combination), how='any').copy()
-                    df_agg = df_base.groupby(cols)[col].agg('nunique').reset_index()
-                    df_agg = df_agg[df_agg[col] == 1].copy()
-                    for query_dict in df_agg[cols].to_dict('records'):
-                        query = dict_to_query(df, query_dict)
-                        value = df_base.query(query)[col].iloc[0]
-                        rules.append({
-                            'query': query,
-                            'column': col,
-                            'value': value
-                        })
-                        
-            return rules
-
-        cols = []
-        cols += ['CryoSleep','VIP']
-        cols += ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
-        rules = []
-
-        for n in range(2,6):
-            rules += generate_rules(cols, n)
-            
-        for r in rules:
-            s = df[df[r['column']].isna()].query(r['query'])[r['column']]
-            if s.size > 0:
-                query = r['query']
-                column = r['column']
-                value = r['value']
-                df.loc[df.query(query).index, column] = value
-
+        for i in range(len(all_x_columns)-1,2,-1):
+            for comination in combinations(all_x_columns, 5):
+                x_columns = list(comination)
+                for y_column in all_y_columns:
+                    if y_column not in x_columns:
+                        df = CustomPipelineUtils.fillna_data_mining(df, x_columns, y_column, min_support).copy()
         return df
 
     def fillna_imputer(df):
@@ -160,7 +162,7 @@ def load_and_transform_data():
     df = pd.concat([df_test, df_train], ignore_index=True)
 
     pipeline = Pipeline(steps=[
-        ('split', FunctionTransformer(CustomPipelineUtils.add_split_columns)),
+        ('split', FunctionTransformer(CustomPipelineUtils.add_columns)),
         ('astype_num', ColumnTransformer(TypeTransformer('float64'), columns=num_cols)),
         ('fillna_rules', FunctionTransformer(CustomPipelineUtils.fillna_rules)),
         ('fillna_imputer', FunctionTransformer(CustomPipelineUtils.fillna_imputer)),
@@ -199,9 +201,10 @@ def get_xy(df):
     return X, y
 
 
-def run():
-    return [os.path.dirname(__file__)+'/train.csv', os.path.dirname(__file__)+'/test.csv']
-
+def run(data_provider: TrainTestDataProvider):
+    df = load_and_transform_data()
+    data_provider.set_df(df)
+    data_provider.save()
 
 class KaggleSpaceshipTitanicDataProvider(TrainTestDataProvider):
 
@@ -210,10 +213,6 @@ class KaggleSpaceshipTitanicDataProvider(TrainTestDataProvider):
         self._train_query = '`train` == 1'
         self._test_query = '`train` == 0'
         self._y_columns = 'Transported'
-
-    def _load(self) -> None:
-        self._df = load_and_transform_data()
-        return super()._load()
 
     def get_x_columns(self) -> List[str]:
         X_col = []
