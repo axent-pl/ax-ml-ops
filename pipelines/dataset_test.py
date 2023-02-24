@@ -8,21 +8,20 @@ from datetime import datetime
 
 from kaggle_spaceship_titanic.data import TrainTestDataProvider
 from kaggle_spaceship_titanic.data import KaggleSpaceshipTitanicDataProvider
+from kaggle_spaceship_titanic.common.task.feature_selection import FeatureSelection
 
-# Define datasets
+# Define datasets and data providers
 train_tesst_dataset = Dataset('s3://dynamic-tasks/data/train-test.csv')
 dp = KaggleSpaceshipTitanicDataProvider()
 dp.set_uri(train_tesst_dataset.uri)
+dp.set_y_columns('Transported')
+dp.set_train_column('train')
+
 version = 'v1'
 
+# Init task processors
+feature_selection = FeatureSelection(data_provider=dp)
 
-def model_feature_selection(version: str = None, data_provider: TrainTestDataProvider = None,  *args, **kwargs):
-    outputs = [
-        { 'x_columns':['X1'] },
-        { 'x_columns':['X1','X2'] },
-        { 'x_columns':['X2','X3'] }
-    ]
-    return outputs
 
 def model_hyperparameter_tuning(version: str = None, model_class: str = 'm', data_provider: TrainTestDataProvider = None, n_trials: int = 100, n_splits: int = 5, scoring: str = 'accuracy', direction = 'maximize', x_columns = None, *args, **kwargs):
     return {'x_columns': x_columns, 'model_class': model_class, 'data_provider': data_provider.get_y_columns() }
@@ -38,9 +37,6 @@ with DAG(
 ) as dag1:
 
     ##### CALLABLES #####
-
-    def model_feature_selection_collable(*args, **kwargs):
-        return model_feature_selection(version=version, data_provider=dp)
 
     def model_hyperparameter_tuning_fanout_callable(ti):
         outputs = []
@@ -59,7 +55,7 @@ with DAG(
 
     model_feature_selection_task = PythonOperator(
         task_id='data-feature-selection',
-        python_callable=model_feature_selection_collable,
+        python_callable=feature_selection.run,
     )
 
     model_hyperparameter_tuning_fanout_task = PythonOperator(

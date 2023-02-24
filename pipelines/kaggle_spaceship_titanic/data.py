@@ -142,9 +142,9 @@ class CustomPipelineUtils:
         return df
 
     def bin_columns(df):
-        # df = CustomPipelineUtils._bin_column(df, 'Age', [0,13,18,26,29,49,200])
-        # df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
-        # df = CustomPipelineUtils._bin_column(df, 'PassengerId_Group', list(range(0,11000,1000)))
+        df = CustomPipelineUtils._bin_column(df, 'Age', [0,13,18,26,29,49,200])
+        df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
+        df = CustomPipelineUtils._bin_column(df, 'PassengerId_Group', list(range(0,11000,1000)))
         return df
     
     def add_summary_columns(df):
@@ -222,13 +222,3 @@ class KaggleSpaceshipTitanicDataProvider(TrainTestDataProvider):
         self._train_query = '`train` == 1'
         self._test_query = '`train` == 0'
         self._y_columns = 'Transported'
-
-    def get_x_columns(self) -> List[str]:
-        X_col = []
-        X_col += num_cols
-        X_col += [cc for cc in self._df.columns if cc.startswith('cat_')]
-        X_col += [cc for cc in self._df.columns if cc.startswith('agr_')]
-        return [ c for c in X_col if c not in ['VIP','agr_Sum_Expenses','agr_Count_Name_Last','agr_Count_Cabin_Num']]
-
-    def get_y_train(self) -> ndarray:
-        return self._get_df().query(self._train_query)[self.get_y_columns()].astype('int').to_numpy()

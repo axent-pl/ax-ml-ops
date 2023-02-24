@@ -13,6 +13,7 @@ class TrainTestDataProvider(ABC):
         self._loaded = False
         self._uri:str = None
         self._df: DataFrame = None
+        self._train_column:str = None
         self._train_query: str = None
         self._test_query:str = None
         self._x_columns:List[str] = None
@@ -52,11 +53,50 @@ class TrainTestDataProvider(ABC):
         self._df = df
         self._loaded = True
 
+    def can_be_x_column(self, column:str, allowed_dtypes:List[str] = ['float64','int64']) -> bool:
+        if self._train_column and column == self._train_column:
+            return False
+        if type(self._y_columns) == str and column == self._y_columns:
+            return False
+        if type(self._y_columns) == list and column in self._y_columns:
+            return False
+        if column not in list(self._get_df().columns):
+            return False
+        if str(self._get_df()[column].dtype) not in allowed_dtypes:
+            return False
+        return True
+
+    def get_train_column(self) -> str:
+        return self._train_column
+
+    def set_train_column(self, column:str) -> None:
+        self._train_column = column
+
+    def get_train_query(self) -> str:
+        if self._train_query:
+            return self._train_query
+        if self._train_column:
+            return f'`{self._train_column}` == 1'
+        raise Exception('Can not build train query')
+
+    def get_test_query(self) -> str:
+        if self._train_query:
+            return self._train_query
+        if self._train_column:
+            return f'`{self._train_column}` == 0'
+        raise Exception('Can not build test query')
+
     def set_uri(self, uri: str):
         self._uri = uri
 
     def get_dataframe(self) -> DataFrame:
         return self._get_df()
+
+    def get_train_dataframe(self) -> DataFrame:
+        return self._get_df().query(self.get_train_query())
+
+    def get_test_dataframe(self) -> DataFrame:
+        return self._get_df().query(self.get_train_query())
 
     def set_x_columns(self, x_columns:List[str]) -> None:
         self._x_columns = x_columns
@@ -71,13 +111,13 @@ class TrainTestDataProvider(ABC):
         return self._y_columns
 
     def get_x_train(self) -> ndarray:
-        return self._get_df().query(self._train_query)[self.get_x_columns()].to_numpy()
+        return self._get_df().query(self.get_train_query())[self.get_x_columns()].to_numpy()
 
     def get_y_train(self) -> ndarray:
-        return self._get_df().query(self._train_query)[self.get_y_columns()].to_numpy()
+        return self._get_df().query(self.get_train_query())[self.get_y_columns()].astype('float64').to_numpy()
 
     def get_x_test(self) -> ndarray:
-        return self._get_df().query(self._test_query)[self.get_x_columns()].to_numpy()
+        return self._get_df().query(self.get_test_query())[self.get_x_columns()].to_numpy()
 
     def get_y_test(self) -> ndarray:
-        return self._get_df().query(self._test_query)[self.get_y_columns()].to_numpy()
+        return self._get_df().query(self.get_test_query())[self.get_y_columns()].astype('float64').to_numpy()
