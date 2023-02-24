@@ -72,7 +72,8 @@ class CustomPipelineUtils:
             .shape[0]
 
         if to_be_filled_count > 0:
-            df = df.merge(df_rules, how='outer', on=cols).copy()
+            df_merged = df.merge(df_rules, how='outer', on=cols)
+            df[f'{col}_val'] = df_merged[f'{col}_val']
             df.loc[(df[col].isna()) & (df[f'{col}_val'].notna()), col] = df[f'{col}_val']
             df.drop(f'{col}_val', axis=1, inplace=True)
             print(cols, col, to_be_filled_count)
@@ -84,12 +85,16 @@ class CustomPipelineUtils:
         all_y_columns = ['HomePlanet', 'CryoSleep', 'Destination', 'Age', 'VIP', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', 'Spending']
         min_support = 2
 
-        for i in range(len(all_x_columns)-1,2,-1):
-            for comination in combinations(all_x_columns, 5):
+        for i in range(len(all_x_columns)-1,3,-1):
+            for comination in combinations(all_x_columns, i):
                 x_columns = list(comination)
                 for y_column in all_y_columns:
                     if y_column not in x_columns:
-                        df = CustomPipelineUtils.fillna_data_mining(df, x_columns, y_column, min_support).copy()
+                        df = CustomPipelineUtils.fillna_data_mining(df, x_columns, y_column, min_support)
+
+        for c in ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']:
+            df.loc[(df[c].isna()) & (df['Spending'] == 0.0), c] = 0.0
+
         return df
 
     def fillna_imputer(df):
@@ -137,9 +142,9 @@ class CustomPipelineUtils:
         return df
 
     def bin_columns(df):
-        df = CustomPipelineUtils._bin_column(df, 'Age', [0,13,18,26,29,49,200])
-        df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
-        df = CustomPipelineUtils._bin_column(df, 'PassengerId_Group', list(range(0,11000,1000)))
+        # df = CustomPipelineUtils._bin_column(df, 'Age', [0,13,18,26,29,49,200])
+        # df = CustomPipelineUtils._bin_column(df, 'Cabin_Num', list(range(0,2400,300)))
+        # df = CustomPipelineUtils._bin_column(df, 'PassengerId_Group', list(range(0,11000,1000)))
         return df
     
     def add_summary_columns(df):
@@ -147,6 +152,10 @@ class CustomPipelineUtils:
         df['agr_Sum_Expenses'] = df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1)
         df['agr_Count_PassengerId_Group'] = df.groupby(['PassengerId_Group']).transform('count')['PassengerId'].fillna(0.0)
         df['agr_Count_Name_Last'] = df.groupby(['Name_Last']).transform('count')['PassengerId'].fillna(0.0)
+
+        df['agr_Age_Cabin_Num'] = df['Age'] * df['Cabin_Num']
+        df['agr_Age_Expenses'] = df['Age'] * df['agr_Sum_Expenses']
+
         return df
 
 cat_cols = ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
