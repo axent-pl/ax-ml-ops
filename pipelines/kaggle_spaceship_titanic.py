@@ -10,20 +10,19 @@ from kaggle_spaceship_titanic.data import KaggleSpaceshipTitanicDataProvider
 def model_ensemble(ti):
     return 'ensembled'
 
+version = 'v9'
+n_trials = 100
+train_tesst_dataset = Dataset('s3://kaggle-spaceship-titanic/data/train-test.csv')
+dp = KaggleSpaceshipTitanicDataProvider()
+dp.set_uri(train_tesst_dataset.uri)
+
 with DAG(
-    "kaggle-spaceship-titanic",
+    "kaggle-spaceship-titanic-data",
     description="Kaggle 'Spaceship Titanic'",
     start_date=datetime(2023, 1, 1),
     schedule_interval=None,
     catchup=False
-) as dag:
-
-    version = 'v7'
-    n_trials = 2
-
-    train_tesst_dataset = Dataset('s3://kaggle-spaceship-titanic/data/train-test.csv')
-    dp = KaggleSpaceshipTitanicDataProvider()
-    dp.set_uri(train_tesst_dataset.uri)
+) as dag_data:
 
     prepare_data_task = PythonOperator(
         task_id="prepare_data",
@@ -33,6 +32,15 @@ with DAG(
             'data_provider' : dp
         }
     )
+
+with DAG(
+    "kaggle-spaceship-titanic-model",
+    description="Kaggle 'Spaceship Titanic'",
+    start_date=datetime(2023, 1, 1),
+    schedule=[train_tesst_dataset],
+    schedule_interval=None,
+    catchup=False
+) as dag_model:
 
     model_train_tasks = []
     for mc in ModelClass:
@@ -54,4 +62,4 @@ with DAG(
         inlets=[train_tesst_dataset]
     )
 
-    prepare_data_task >> model_train_tasks >> model_ensemble_task
+    model_train_tasks >> model_ensemble_task
