@@ -58,8 +58,14 @@ class TrainTestDataProvider(ABC):
     def get_dataframe(self) -> DataFrame:
         return self._get_df()
 
+    def set_x_columns(self, x_columns:List[str]) -> None:
+        self._x_columns = x_columns
+
     def get_x_columns(self) -> List[str]:
         return self._x_columns
+
+    def set_y_columns(self, y_columns:Union[str,List[str]]) -> None:
+        self._y_columns = y_columns
 
     def get_y_columns(self) -> Union[str,List[str]]:
         return self._y_columns
