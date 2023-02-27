@@ -22,7 +22,7 @@ class FeatureSelection:
                 all_features.append(c)
         return all_features
 
-    def _run_selector_max_corr(self, selector:str, max_correlation:float = 0.5, excluded_features:List[str] = []):
+    def _run_selector_cap_corr(self, selector:str, max_correlation:float = 0.5, excluded_features:List[str] = []):
         all_features = self._get_all_features(excluded_features=excluded_features)
         X = self._dp.get_train_dataframe()[all_features].to_numpy()
         y = self._dp.get_y_train()
@@ -50,14 +50,23 @@ class FeatureSelection:
 
         return [ f for f in all_features if f not in removed_featues ]
 
-    def run_chi2_max_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
-        return self._run_selector_max_corr('chi2', max_correlation=max_correlation, excluded_features=excluded_features)
+    def run_chi2_cap_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
+        return self._run_selector_cap_corr('chi2', max_correlation=max_correlation, excluded_features=excluded_features)
 
-    def run_fclassif_max_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
-        return self._run_selector_max_corr('f_classif', max_correlation=max_correlation, excluded_features=excluded_features)
+    def run_chi2_k_best(self, k:int, excluded_features:List[str] = []):
+        all_features = self._get_all_features(excluded_features=excluded_features)
+        X = self._dp.get_train_dataframe()[all_features].to_numpy()
+        y = self._dp.get_y_train()
+        feature_scores = SelectKBest(chi2, k=k).fit(X, y)
+        feature_indx = feature_scores.get_support(indices=True)
+        features = self._dp.get_train_dataframe()[all_features].columns[feature_indx]
+        return list(features)
 
-    def run_mutualinfoclassif_max_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
-        return self._run_selector_max_corr('mutual_info_classif', max_correlation=max_correlation, excluded_features=excluded_features)
+    def run_fclassif_cap_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
+        return self._run_selector_cap_corr('f_classif', max_correlation=max_correlation, excluded_features=excluded_features)
+
+    def run_mutualinfoclassif_cap_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
+        return self._run_selector_cap_corr('mutual_info_classif', max_correlation=max_correlation, excluded_features=excluded_features)
 
     def run(self, mode: str, *args, **kwargs):
         if hasattr(self, f'run_{mode}'):
