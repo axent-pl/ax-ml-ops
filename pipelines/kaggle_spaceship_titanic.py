@@ -81,7 +81,8 @@ with DAG(
         python_callable=feature_selection.run
     ).expand(
         op_kwargs = [
-            { 'mode':'chi2_max_corr', 'label':'chi2', 'max_correlation':0.6 },
+            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr', 'max_correlation':0.6 },
+            { 'mode':'chi2_k_best', 'label':'chi2_k_best', 'k':20 }
             # { 'mode':'fclassif_max_corr', 'label':'f-classif', 'max_correlation':0.6, 'excluded_features':['VIP'] }
             # { 'mode':'mutualinfoclassif_max_corr', 'label':'mi-classif' }
         ]
