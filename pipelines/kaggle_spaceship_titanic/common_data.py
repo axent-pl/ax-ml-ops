@@ -96,28 +96,28 @@ class TrainTestDataProvider(ABC):
         return self._get_df().query(self.get_train_query())
 
     def get_test_dataframe(self) -> DataFrame:
-        return self._get_df().query(self.get_train_query())
+        return self._get_df().query(self.get_test_query())
 
     def set_x_columns(self, x_columns:List[str]) -> None:
         self._x_columns = x_columns
 
-    def get_x_columns(self) -> List[str]:
-        return self._x_columns
+    def get_x_columns(self, columns:List[str] = None) -> List[str]:
+        return columns or self._x_columns
 
     def set_y_columns(self, y_columns:Union[str,List[str]]) -> None:
         self._y_columns = y_columns
 
-    def get_y_columns(self) -> Union[str,List[str]]:
-        return self._y_columns
+    def get_y_columns(self, columns:Union[str,List[str]] = None) -> Union[str,List[str]]:
+        return columns or self._y_columns
 
-    def get_x_train(self) -> ndarray:
-        return self._get_df().query(self.get_train_query())[self.get_x_columns()].to_numpy()
+    def get_x_train(self, columns:List[str] = None) -> ndarray:
+        return self._get_df().query(self.get_train_query())[self.get_x_columns(columns)].to_numpy()
 
-    def get_y_train(self) -> ndarray:
-        return self._get_df().query(self.get_train_query())[self.get_y_columns()].astype('float64').to_numpy()
+    def get_y_train(self, columns:Union[str,List[str]] = None) -> ndarray:
+        return self._get_df().query(self.get_train_query())[self.get_y_columns(columns)].astype('float64').to_numpy()
 
-    def get_x_test(self) -> ndarray:
-        return self._get_df().query(self.get_test_query())[self.get_x_columns()].to_numpy()
+    def get_x_test(self, columns:List[str] = None) -> ndarray:
+        return self._get_df().query(self.get_test_query())[self.get_x_columns(columns)].to_numpy()
 
-    def get_y_test(self) -> ndarray:
-        return self._get_df().query(self.get_test_query())[self.get_y_columns()].astype('float64').to_numpy()
+    def get_y_test(self, columns:Union[str,List[str]] = None) -> ndarray:
+        return self._get_df().query(self.get_test_query())[self.get_y_columns(columns)].astype('float64').to_numpy()

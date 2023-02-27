@@ -14,7 +14,12 @@ from sklearn.pipeline import Pipeline
 
 from .common.transformer.column_transformer import ColumnTransformer
 from .common.transformer.type_transformer import TypeTransformer
+from .common.transformer.fillna_association_transformer import FillnaAssociationTransformer
 from .common_data import TrainTestDataProvider
+
+cat_cols = ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
+num_cols = ['Age','RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck','Cabin_Num','PassengerId_Group','PassengerId_Number','CryoSleep','VIP']
+exp_cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
 
 class PipelineUtils:
 
@@ -28,12 +33,6 @@ class PipelineUtils:
                 df.loc[(df[c].isnull()),list(dummies.columns)] = np.nan
         return df
 
-    def del_dummies(df, columns: List[str]):
-        for c in columns:
-            dummies = pd.get_dummies(df[c], prefix=f'cat_{c}', drop_first=False)
-            new_columns += list(dummies.columns)
-            df.drop(new_columns, axis=1, inplace=True)
-        return df
 
 class CustomPipelineUtils:
     
@@ -42,62 +41,25 @@ class CustomPipelineUtils:
         df[['Cabin_Deck','Cabin_Num','Cabin_Side']] = df['Cabin'].str.split('/', expand=True)
         df[['Name_First','Name_Last']] = df['Name'].str.split(' ', expand=True)
 
-        exp_cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
-        df['Spending'] = (df[exp_cols].max(axis=1) > 0)
-        df['Spending'] = df['Spending'].astype(float)
-        for c in exp_cols:
-            df.loc[(df[c].isna()) & (df['Spending'] == 0), 'Spending'] = np.nan
-
-        return df
-
-    def fillna_data_mining(df, x_columns, y_column, min_support):
-        cols = x_columns
-        col = y_column
-
-        # extracting rules with min_support
-        df_rules = df[cols+[col]]\
-            .dropna(subset=list(cols), how='any')\
-            .groupby(cols)[[col]]\
-            .agg(nunique=(col,'nunique'),support=(col,'count'),val=(col,'last'))\
-            .reset_index()\
-            .query(f'nunique == 1 and support >= {min_support}')\
-            .copy()
-        df_rules.rename(columns={'val':f'{col}_val'}, inplace=True)
-        df_rules.drop(['nunique','support'], axis=1, inplace=True)
-
-        # if rules can be applied than apply
-        to_be_filled_count = df[df[col].isna()]\
-            .merge(df_rules, how='inner', on=cols)\
-            .dropna(subset=list(cols), how='any')\
-            .shape[0]
-
-        if to_be_filled_count > 0:
-            df_merged = df.merge(df_rules, how='outer', on=cols)
-            df[f'{col}_val'] = df_merged[f'{col}_val']
-            df.loc[(df[col].isna()) & (df[f'{col}_val'].notna()), col] = df[f'{col}_val']
-            df.drop(f'{col}_val', axis=1, inplace=True)
-            print(cols, col, to_be_filled_count)
         
+        df['_has_expenses'] = (df[exp_cols].max(axis=1) > 0)
+        df['_has_expenses'] = df['_has_expenses'].astype(float)
+        for c in exp_cols:
+            df.loc[(df[c].isna()) & (df['_has_expenses'] == 0), '_has_expenses'] = np.nan
+
         return df
 
-    def fillna_rules(df):
-        all_x_columns = ['HomePlanet', 'CryoSleep', 'Destination', 'Age', 'VIP', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', 'Spending', 'PassengerId_Group', 'Name_Last']
-        all_y_columns = ['HomePlanet', 'CryoSleep', 'Destination', 'Age', 'VIP', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', 'Spending']
-        min_support = 2
-
-        for i in range(len(all_x_columns)-1,3,-1):
-            for comination in combinations(all_x_columns, i):
-                x_columns = list(comination)
-                for y_column in all_y_columns:
-                    if y_column not in x_columns:
-                        df = CustomPipelineUtils.fillna_data_mining(df, x_columns, y_column, min_support)
-
-        for c in ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']:
-            df.loc[(df[c].isna()) & (df['Spending'] == 0.0), c] = 0.0
-
+    def fillna_expenses(df):
+        # fill expenses after fillna_associations
+        for c in exp_cols:
+            df.loc[(df[c].isna()) & (df['_has_expenses'] == 0), c] = 0.0
         return df
 
     def fillna_imputer(df):
+        # Mark which Cabin_Num values were filled with associations
+        df['_Cabin_Num_Na'] = 0
+        df.loc[df['Cabin_Num'].isna(),'_Cabin_Num_Na'] = 1
+
         cat_cols = ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
         num_cols = ['Age','RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck','Cabin_Num','PassengerId_Group','PassengerId_Number','CryoSleep','VIP']
 
@@ -126,11 +88,12 @@ class CustomPipelineUtils:
         for cds in df['Cabin_Deck_Side'].unique():
             df_slice = df[(df['Cabin'].notna()) & (df['Cabin_Deck_Side']==cds)]
             a,b = np.polyfit(df_slice['PassengerId_Group'], df_slice['Cabin_Num'], deg=1)
-            df.loc[(df['Cabin_Deck_Side']==cds) & (df['Cabin'].isna()), 'Cabin_Num'] = a * df['PassengerId_Group'] + b
+            df.loc[(df['Cabin_Deck_Side']==cds) & (df['_Cabin_Num_Na']==1), 'Cabin_Num'] = a * df['PassengerId_Group'] + b
         return df
 
     def log_scale(df):
         cols = ['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
+        cols += [ c for c in df.columns if 'Expenses' in c ]
         for c in cols:
             df[c] = np.log(df[c]+1.0)
         return df
@@ -148,18 +111,24 @@ class CustomPipelineUtils:
         return df
     
     def add_summary_columns(df):
-        df['agr_Count_Cabin_Num'] = df.groupby(['Cabin_Num']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Sum_Expenses'] = df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1)
-        df['agr_Count_PassengerId_Group'] = df.groupby(['PassengerId_Group']).transform('count')['PassengerId'].fillna(0.0)
-        df['agr_Count_Name_Last'] = df.groupby(['Name_Last']).transform('count')['PassengerId'].fillna(0.0)
+        df['agr_Sum_Expenses'] = df[['RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']].sum(axis=1).fillna(0.0)
+        df["agr_Sum_Expenses_Regular"] = df["FoodCourt"] + df["ShoppingMall"] 
+        df["agr_Sum_Expenses_Luxury"] = df["RoomService"] + df["Spa"] + df["VRDeck"]
+
+        df['_Cabin'] = df['Cabin_Deck'].astype('str') + "/" + df['Cabin_Side'].astype('str') + "/" + df['Cabin_Num'].astype('str')
+        df['agr_Count_PassengerId_by_Cabin'] = df.groupby(['_Cabin'])['PassengerId'].transform('count').fillna(0.0)
+        df['agr_Count_PassengerId_by_Group'] = df.groupby(['PassengerId_Group'])['PassengerId'].transform('count').fillna(0.0)
+
+        df['agr_Avg_Expenses_by_Deck'] = df.groupby(['Cabin_Deck'])['agr_Sum_Expenses'].transform('mean').fillna(0.0)
+
+        df['agr_Sum_Expenses_by_Cabin'] = df.groupby(['_Cabin'])['agr_Sum_Expenses'].transform('sum').fillna(0.0)
+        df['agr_Sum_Expenses_by_Group'] = df.groupby(['PassengerId_Group'])['agr_Sum_Expenses'].transform('sum').fillna(0.0)
 
         df['agr_Age_Cabin_Num'] = df['Age'] * df['Cabin_Num']
         df['agr_Age_Expenses'] = df['Age'] * df['agr_Sum_Expenses']
 
         return df
 
-cat_cols = ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
-num_cols = ['Age','RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck','Cabin_Num','PassengerId_Group','PassengerId_Number','CryoSleep','VIP']
 
 def load_and_transform_data():
     df_train = pd.read_csv(os.path.dirname(__file__)+'/train.csv')
@@ -171,15 +140,16 @@ def load_and_transform_data():
     df = pd.concat([df_test, df_train], ignore_index=True)
 
     pipeline = Pipeline(steps=[
-        ('split', FunctionTransformer(CustomPipelineUtils.add_columns)),
-        ('astype_num', ColumnTransformer(TypeTransformer('float64'), columns=num_cols)),
-        ('fillna_rules', FunctionTransformer(CustomPipelineUtils.fillna_rules)),
+        ('add_columns', FunctionTransformer(CustomPipelineUtils.add_columns)),
+        ('astype_num', ColumnTransformer(TypeTransformer('float64'), columns=num_cols+['Transported'])),
+        ('fillna_associations', ColumnTransformer(FillnaAssociationTransformer(), columns=['HomePlanet', 'Destination', 'CryoSleep', 'VIP', 'Age', 'Cabin_Deck', 'Cabin_Num', 'Cabin_Side', '_has_expenses', 'PassengerId_Group'])),
+        ('fillna_expenses', FunctionTransformer(CustomPipelineUtils.fillna_expenses)),
         ('fillna_imputer', FunctionTransformer(CustomPipelineUtils.fillna_imputer)),
         ('fillna_cabin_num', FunctionTransformer(CustomPipelineUtils.fillna_fix_cabin_num)),
-        ('log_scale', FunctionTransformer(CustomPipelineUtils.log_scale)),
         ('astype_cat', ColumnTransformer(TypeTransformer('category'), columns=cat_cols)),
         ('add_dummies', FunctionTransformer(PipelineUtils.add_dummies, kw_args={'columns':cat_cols})),
         ('add_summary_columns', FunctionTransformer(CustomPipelineUtils.add_summary_columns)),
+        ('log_scale', FunctionTransformer(CustomPipelineUtils.log_scale)),
         ('bin_columns', FunctionTransformer(CustomPipelineUtils.bin_columns)),
         ('scale_num',  ColumnTransformer(MinMaxScaler(), columns=num_cols)),
         ('scale_agr',  ColumnTransformer(MinMaxScaler(), columns=[re.compile('^agr_.*')]))
@@ -187,27 +157,11 @@ def load_and_transform_data():
 
     pipeline.fit_transform(df)
     
+    for c in df.columns:
+        if c.startswith('_'):
+            df.drop(c, axis=1, inplace=True)
+
     return df
-
-
-def get_xy_cols(df):
-    X_col = []
-    X_col += num_cols
-    X_col += [cc for cc in df.columns if cc.startswith('cat_')]
-    X_col += [cc for cc in df.columns if cc.startswith('agr_')]
-    y_col = 'Transported'
-    
-    return X_col, y_col
-
-
-def get_xy(df):
-    X_col, y_col = get_xy_cols(df)
-    X = df[X_col].to_numpy()
-    if y_col in df.columns:
-        y = df[y_col].astype('int').to_numpy()
-    else:
-        y = None
-    return X, y
 
 
 def run(data_provider: TrainTestDataProvider):
@@ -215,10 +169,3 @@ def run(data_provider: TrainTestDataProvider):
     data_provider.set_df(df)
     data_provider.save()
 
-class KaggleSpaceshipTitanicDataProvider(TrainTestDataProvider):
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._train_query = '`train` == 1'
-        self._test_query = '`train` == 0'
-        self._y_columns = 'Transported'

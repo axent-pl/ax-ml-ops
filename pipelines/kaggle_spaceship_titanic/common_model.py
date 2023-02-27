@@ -5,7 +5,7 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_validate
 
-class ModelClass(Enum):
+class ModelClass(str, Enum):
     CBC = 'CatBoostClassifier'
     RFC = 'RandomForestClassifier'
     SVC = 'SVC'
