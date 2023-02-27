@@ -52,6 +52,7 @@ services:
         - ax
 
   s3-config-job:
+    restart: on-failure
     build:
         context: services/s3-config
     environment:
@@ -66,6 +67,7 @@ services:
         - ax
 
   mlflow:
+    restart: on-failure
     build:
       context: services/mlflow
     environment:
@@ -84,6 +86,7 @@ services:
       - ax
 
   airflow:
+    restart: on-failure
     build:
       context: services/airflow
       args:
@@ -120,6 +123,7 @@ services:
       - ax
 
   airflow-scheduler:
+    restart: on-failure
     build:
       context: services/airflow
       args:
@@ -155,6 +159,10 @@ services:
       - ax
 
   airflow-worker:
+    restart: on-failure
+    deploy:
+      mode: replicated
+      replicas: 3
     build:
       context: services/airflow
       args:
@@ -190,6 +198,7 @@ services:
       - ax
 
   optuna-dashboard:
+    restart: on-failure
     build:
       context: services/optuna-dashboard
     environment:
@@ -212,6 +221,8 @@ services:
       - DB_MLFLOW_NAME=${DB_MLFLOW_NAME}
       - JUPYTER_TOKEN=${NB_PASS}
       - NB_UID=${UID}
+      - MLFLOW_HOST=mlflow
+      - MLFLOW_PORT=5000
       - S3_HOST=s3
       - S3_PORT=9000
       - S3_BUCKET=${S3_BUCKET}
@@ -221,6 +232,7 @@ services:
       - 8800:8888
     volumes:
       - ./pipelines:/home/jovyan/pipelines:ro
+      - ./notebooks:/home/jovyan/notebooks
     networks:
       - ax
 
