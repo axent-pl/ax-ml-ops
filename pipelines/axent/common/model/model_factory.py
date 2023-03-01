@@ -5,7 +5,7 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_validate
 
-class ModelClass(Enum):
+class ModelClass(str, Enum):
     CBC = 'CatBoostClassifier'
     RFC = 'RandomForestClassifier'
     SVC = 'SVC'
@@ -14,7 +14,7 @@ class ModelClass(Enum):
 
 class ModelFactory:
 
-    def _get_cbc(trial, params):
+    def _get_CBC(trial, params):
         _params = {}
         if trial:
             _params = {
@@ -29,7 +29,7 @@ class ModelFactory:
             _params = params
         return CatBoostClassifier(**_params)
 
-    def _get_rfc(trial, params):
+    def _get_RFC(trial, params):
         _params = {}
         if trial:
             _params = {
@@ -44,7 +44,7 @@ class ModelFactory:
             _params = params
         return RandomForestClassifier(**_params)
 
-    def _get_svc(trial, params):
+    def _get_SVC(trial, params):
         _params = {}
         if trial:
             _params = {
@@ -56,7 +56,7 @@ class ModelFactory:
             _params = params
         return SVC(**_params)
 
-    def _get_lrc(trial, params):
+    def _get_LRC(trial, params):
         _params = {}
         if trial:
             _params = {
@@ -70,13 +70,13 @@ class ModelFactory:
 
     def get(model_class: ModelClass, trial = None, params = None):
         if model_class == ModelClass.CBC:
-            return ModelFactory._get_cbc(trial, params)
+            return ModelFactory._get_CBC(trial, params)
         if model_class == ModelClass.RFC:
-            return ModelFactory._get_rfc(trial, params)
+            return ModelFactory._get_RFC(trial, params)
         if model_class == ModelClass.SVC:
-            return ModelFactory._get_svc(trial, params)
+            return ModelFactory._get_SVC(trial, params)
         if model_class == ModelClass.LRC:
-            return ModelFactory._get_lrc(trial, params)
+            return ModelFactory._get_LRC(trial, params)
 
         raise Exception('Unsupported model class')
 
