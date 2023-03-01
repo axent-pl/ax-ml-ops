@@ -3,34 +3,26 @@ from typing import List, Union
 import mlflow
 import optuna
 from optuna.integration.mlflow import MLflowCallback
-from ...common_model import ModelClass, ModelTrain
-from ...common_data import TrainTestDataProvider
+from ..model import ModelClass, ModelTrain
+from ..data import TrainTestDataProvider
+from ..data import FeaturesDataProvider
 
 class ModelHyperParameterTuning:
 
-    def __init__(self, data_provider:TrainTestDataProvider) -> None:
+    def __init__(self, data_provider:TrainTestDataProvider, features_provider: FeaturesDataProvider = None) -> None:
         self._dp:TrainTestDataProvider = data_provider
+        self._fp:FeaturesDataProvider = features_provider
 
-    def run(
-        self,
-        model_class: ModelClass,
-        x_columns: List[str] = None,
-        y_columns: Union[str,List[str]] = None,
-        label: str = None,
-        n_trials: int = 100,
-        n_splits: int = 5,
-        scoring: str = 'accuracy',
-        direction = 'maximize',
-        *args,
-        **kwargs
-    ):
+    def run(self, model_class: ModelClass, features_class: str, label: str = None, n_trials: int = 100, n_splits: int = 5, scoring: str = 'accuracy', direction = 'maximize', *args, **kwargs):
         mlflc = MLflowCallback(metric_name=scoring)
 
         @mlflc.track_in_mlflow()
         def objective(trial):
-            x_train = self._dp.get_x_train(x_columns)
-            y_train = self._dp.get_y_train(y_columns)
+            x_train = self._dp.get_x_train(self._fp.get_features(features_class=features_class))
+            y_train = self._dp.get_y_train()
             scores = ModelTrain.get_cv_scores(model_class=model_class, x=x_train, y=y_train, trial=trial, n_splits=n_splits, scoring=scoring)
+            mlflow.log_param("model_class", model_class)
+            mlflow.log_param("features_class", features_class)
             mlflow.log_metric(f"train_min_{scoring}", scores["train_score"].min())
             mlflow.log_metric(f"train_mean_{scoring}", scores["train_score"].mean())
             mlflow.log_metric(f"train_max_{scoring}", scores["train_score"].max())
@@ -49,4 +41,10 @@ class ModelHyperParameterTuning:
 
         study.optimize(objective, n_trials=n_trials, callbacks=[mlflc])
 
-        return study.best_params
+        return {
+            "model_class": model_class,
+            "features_class": features_class,
+            "scoring": scoring,
+            "score": study.best_value,
+            "params": study.best_params
+        }

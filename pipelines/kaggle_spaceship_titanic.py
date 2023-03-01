@@ -2,32 +2,36 @@ from datetime import datetime
 from airflow import DAG, Dataset, XComArg
 from airflow.operators.python import PythonOperator
 
-from kaggle_spaceship_titanic.data import run as prepare_data
-from kaggle_spaceship_titanic.common_model import ModelClass
-from kaggle_spaceship_titanic.common_data import TrainTestDataProvider
-from kaggle_spaceship_titanic.common.task.model_hyperparameter_tuning import ModelHyperParameterTuning
-from kaggle_spaceship_titanic.common.task.feature_selection import FeatureSelection
-
+from axent.common.model import ModelClass
+from axent.common.data import TrainTestDataProvider
+from axent.common.data import FeaturesDataProvider
+from axent.common.runtime import ModelHyperParameterTuning
+from axent.common.runtime import FeatureSelection
+from axent.kaggle_spaceship_titanic.data import run as prepare_data
 
 ##### Inititalize globals #####
 
-version = 'v13'
+version = 'v14'
 n_trials = 100
 
 
 ##### Inititalize datasets and data providers #####
 
-train_tesst_dataset = Dataset('s3://kaggle-spaceship-titanic/data/train-test.csv')
+train_test_dataset = Dataset('s3://kaggle-spaceship-titanic/data/train-test.csv')
+features_dataset = Dataset('s3://kaggle-spaceship-titanic/features')
 dp = TrainTestDataProvider()
-dp.set_uri(train_tesst_dataset.uri)
+dp.set_uri(train_test_dataset.uri)
 dp.set_y_columns('Transported')
 dp.set_train_column('train')
+
+fp = FeaturesDataProvider()
+fp.set_base_uri(features_dataset.uri)
 
 
 ##### Inititalize task processors #####
 
-feature_selection = FeatureSelection(data_provider=dp)
-model_hyperparameter_tuning = ModelHyperParameterTuning(data_provider=dp)
+feature_selection = FeatureSelection(data_provider=dp, features_provider=fp)
+model_hyperparameter_tuning = ModelHyperParameterTuning(data_provider=dp, features_provider=fp)
 
 
 ##### Callables #####
@@ -37,9 +41,10 @@ def feature_selection_to_models_callable(ti):
     feature_selection_outputs = ti.xcom_pull(key="return_value", task_ids="feature-selection")
     for feature_selection_output in feature_selection_outputs:
         for model_class in [ModelClass.CBC]:
-            model_hyperparameter_tuning_input = feature_selection_output.copy()
+            model_hyperparameter_tuning_input = {}
             model_hyperparameter_tuning_input['model_class'] = model_class
-            model_hyperparameter_tuning_input['label'] = f"{model_class.value.lower()}-{model_hyperparameter_tuning_input['label']}-{version}"
+            model_hyperparameter_tuning_input['features_class'] = feature_selection_output['features_class']
+            model_hyperparameter_tuning_input['label'] = f"{model_class.value.lower()}-{model_hyperparameter_tuning_input['features_class']}-{version}"
             model_hyperparameter_tuning_input['n_trials'] = n_trials
             output.append(model_hyperparameter_tuning_input)
     return output
@@ -61,17 +66,18 @@ with DAG(
     prepare_data_task = PythonOperator(
         task_id="prepare_data",
         python_callable=prepare_data,
-        outlets=[train_tesst_dataset],
+        outlets=[train_test_dataset],
         op_kwargs={
             'data_provider' : dp
         }
     )
 
+
 with DAG(
     "kaggle-spaceship-titanic-model",
     description="Kaggle 'Spaceship Titanic'",
     start_date=datetime(2023, 1, 1),
-    schedule=[train_tesst_dataset],
+    schedule=[train_test_dataset],
     schedule_interval=None,
     catchup=False
 ) as dag_model:
@@ -103,7 +109,7 @@ with DAG(
     model_ensemble_task = PythonOperator(
         task_id='model-ensemble',
         python_callable=model_ensemble_callable,
-        inlets=[train_tesst_dataset]
+        inlets=[train_test_dataset]
     )
 
     feature_selection_tasks >> feature_selection_to_models_task >> model_hyperparameter_tuning_tasks >> model_ensemble_task

@@ -1,5 +1,6 @@
 from typing import List
-from ...common_data import TrainTestDataProvider
+from ..data import TrainTestDataProvider
+from ..data import FeaturesDataProvider
 
 import pandas as pd
 
@@ -10,9 +11,9 @@ from sklearn.feature_selection import mutual_info_classif
 
 class FeatureSelection:
 
-    def __init__(self, data_provider: TrainTestDataProvider = None) -> None:
+    def __init__(self, data_provider: TrainTestDataProvider = None, features_provider: FeaturesDataProvider = None) -> None:
         self._dp:TrainTestDataProvider = data_provider
-        pass
+        self._fp:FeaturesDataProvider = features_provider
 
     def _get_all_features(self, excluded_features:List[str] = []):
         dp_train_df = self._dp.get_train_dataframe()
@@ -53,7 +54,7 @@ class FeatureSelection:
     def run_chi2_cap_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
         return self._run_selector_cap_corr('chi2', max_correlation=max_correlation, excluded_features=excluded_features)
 
-    def run_chi2_k_best(self, k:int, excluded_features:List[str] = []):
+    def run_chi2_k_best(self, k:int, excluded_features:List[str] = [], *args, **kwargs):
         all_features = self._get_all_features(excluded_features=excluded_features)
         X = self._dp.get_train_dataframe()[all_features].to_numpy()
         y = self._dp.get_y_train()
@@ -70,9 +71,10 @@ class FeatureSelection:
 
     def run(self, mode: str, *args, **kwargs):
         if hasattr(self, f'run_{mode}'):
+            features = getattr(self, f'run_{mode}')(*args, **kwargs)
+            features_class = kwargs['label'] if 'label' in kwargs else mode
+            self._fp.set_features(features_class=features_class, features=features)
             return {
-                'label': kwargs['label'] if 'label' in kwargs else mode,
-                'mode': mode,
-                'x_columns': getattr(self, f'run_{mode}')(*args, **kwargs)
+                'features_class': features_class
             }
         raise Exception(f'Mode {mode} not supported')

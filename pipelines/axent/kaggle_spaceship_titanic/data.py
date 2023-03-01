@@ -12,10 +12,10 @@ from sklearn.impute import KNNImputer
 from sklearn.preprocessing import FunctionTransformer, StandardScaler, MinMaxScaler
 from sklearn.pipeline import Pipeline
 
-from .common.transformer.column_transformer import ColumnTransformer
-from .common.transformer.type_transformer import TypeTransformer
-from .common.transformer.fillna_association_transformer import FillnaAssociationTransformer
-from .common_data import TrainTestDataProvider
+from ..common.transformer import ColumnTransformer
+from ..common.transformer import TypeTransformer
+from ..common.transformer import FillnaAssociationTransformer
+from ..common.data import TrainTestDataProvider
 
 cat_cols = ['HomePlanet','Destination','Cabin_Deck','Cabin_Side']
 num_cols = ['Age','RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck','Cabin_Num','PassengerId_Group','PassengerId_Number','CryoSleep','VIP']

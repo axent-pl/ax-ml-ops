@@ -8,10 +8,6 @@ class ColumnTransformer:
 
     Attributes
     ----------
-    _fitted: bool
-        a boolean that indicates whether the transformer has been fitted to the data
-    _fit_once: bool
-        a boolean that indicates whether the transformer should only be fitted once
     _transformer: callable
         the transformer that should be applied to the selected columns
     _columns: List[Union[str,Pattern]]
@@ -21,9 +17,8 @@ class ColumnTransformer:
 
     Methods
     -------
-    __init__(self, transformer, columns:List[Union[str,Pattern]]=[], fit_once=True)
-        initializes the ColumnTransformer object with the transformer, columns to be transformed,
-        and whether the transformer should be fit once
+    __init__(self, transformer, columns:List[Union[str,Pattern]]=[])
+        initializes the ColumnTransformer object with the transformer, columns to be transformed
     _calculate_columns(self, X:DataFrame) -> List[str]
         selects the columns to be transformed based on the _columns attribute
     fit(self, X:DataFrame, y=None)
@@ -32,9 +27,7 @@ class ColumnTransformer:
         applies the fitted transformer to the selected columns in the input DataFrame
     """
 
-    def __init__(self, transformer, columns:List[Union[str,Pattern]]=[], fit_once=True):
-        self._fitted:bool = False
-        self._fit_once:bool = False
+    def __init__(self, transformer, columns:List[Union[str,Pattern]]=[]):
         self._transformer = transformer
         self._columns:List[Union[str,Pattern]] = columns
         self._calculated_columns:List[str] = []
@@ -52,10 +45,8 @@ class ColumnTransformer:
         return _columns
         
     def fit(self, X:DataFrame, y=None):
-        if self._fit_once and not self._fitted or not self._fit_once:
-            self._calculate_columns(X)
-            self._transformer.fit(X[self._calculated_columns])
-            self._fitted = True
+        self._calculate_columns(X)
+        self._transformer.fit(X[self._calculated_columns])
         return self
     
     def transform(self, X:DataFrame, y=None):
