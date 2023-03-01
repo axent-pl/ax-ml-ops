@@ -27,9 +27,14 @@ This project shows how you may integrate some of the popular tools to perform Da
     ./stack-up.sh
     ```
 
-2. Execute *kaggle-spaceship-titanic-data* pipeline in **Airflow** (http://localhost:8000):
+2. Enable following pipelines in **Airflow** (http://localhost:8000)
 
-3. Execute the experiment pipeline with **Airflow**
+    * kaggle-spaceship-titanic-data
+
+    * kaggle-spaceship-titanic-model
+
+
+3. Execute *kaggle-spaceship-titanic-data* pipeline with **Airflow**
 
 4. Monitor key metrics with **MLFlow**
 
