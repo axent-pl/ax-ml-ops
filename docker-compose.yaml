@@ -160,9 +160,6 @@ services:
 
   airflow-worker:
     restart: on-failure
-    deploy:
-      mode: replicated
-      replicas: 3
     build:
       context: services/airflow
       args:
@@ -230,6 +227,7 @@ services:
       - S3_AUTH_SECRET_KEY=${S3_AUTH_SECRET_KEY}
     ports:
       - 8800:8888
+      - 6006:6006
     volumes:
       - ./pipelines:/home/jovyan/pipelines:ro
       - ./notebooks:/home/jovyan/notebooks
