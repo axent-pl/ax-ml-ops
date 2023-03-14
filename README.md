@@ -20,14 +20,14 @@ This project shows how you may integrate some of the popular tools to perform Da
 * **RabbitMQ**
 
 
-## Usage scenario (as intended)
+## Usage scenario
 
 1. Start **ax-ml-ops** application stack with
     ```shell
     ./stack-up.sh
     ```
 
-2. Enable following pipelines in **Airflow** (http://localhost:8000)
+2. Enable following pipelines in **Airflow**
 
     * kaggle-spaceship-titanic-data
 

@@ -7,18 +7,20 @@ from axent.common.data import TrainTestDataProvider
 from axent.common.data import FeaturesDataProvider
 from axent.common.runtime import ModelHyperParameterTuning
 from axent.common.runtime import FeatureSelection
+from axent.common.task import ModelTrainBest
 from axent.kaggle_spaceship_titanic.data import run as prepare_data
 
 ##### Inititalize globals #####
 
-version = 'v14'
-n_trials = 100
+version = 'v2'
+n_trials = 10
 
 
 ##### Inititalize datasets and data providers #####
 
 train_test_dataset = Dataset('s3://kaggle-spaceship-titanic/data/train-test.csv')
 features_dataset = Dataset('s3://kaggle-spaceship-titanic/features')
+
 dp = TrainTestDataProvider()
 dp.set_uri(train_test_dataset.uri)
 dp.set_y_columns('Transported')
@@ -32,6 +34,7 @@ fp.set_base_uri(features_dataset.uri)
 
 feature_selection = FeatureSelection(data_provider=dp, features_provider=fp)
 model_hyperparameter_tuning = ModelHyperParameterTuning(data_provider=dp, features_provider=fp)
+model_train_best = ModelTrainBest(data_provider=dp, features_provider=fp)
 
 
 ##### Callables #####
@@ -48,9 +51,6 @@ def feature_selection_to_models_callable(ti):
             model_hyperparameter_tuning_input['n_trials'] = n_trials
             output.append(model_hyperparameter_tuning_input)
     return output
-
-def model_ensemble_callable(ti):
-    return 'ensembled'
 
 
 ##### DAGs #####
@@ -87,10 +87,10 @@ with DAG(
         python_callable=feature_selection.run
     ).expand(
         op_kwargs = [
-            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr', 'max_correlation':0.6 },
-            { 'mode':'chi2_k_best', 'label':'chi2_k_best', 'k':20 }
-            # { 'mode':'fclassif_max_corr', 'label':'f-classif', 'max_correlation':0.6, 'excluded_features':['VIP'] }
-            # { 'mode':'mutualinfoclassif_max_corr', 'label':'mi-classif' }
+            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr_06', 'max_correlation':0.6 },
+            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr_06_no_vip', 'max_correlation':0.6, 'excluded_features':['VIP'] },
+            { 'mode':'chi2_k_best', 'label':'chi2_20_best', 'k':20 },
+            { 'mode':'chi2_k_best', 'label':'chi2_22_best', 'k':22 }
         ]
     )
 
@@ -106,10 +106,13 @@ with DAG(
         op_kwargs = XComArg(feature_selection_to_models_task, key='return_value')
     )
 
-    model_ensemble_task = PythonOperator(
-        task_id='model-ensemble',
-        python_callable=model_ensemble_callable,
-        inlets=[train_test_dataset]
+    model_train_best_task = PythonOperator(
+        task_id='model-train-best',
+        python_callable=model_train_best.execute,
+        inlets=[train_test_dataset],
+        op_kwargs={
+            'task_ids':'model-hyperparameter-tuning'
+        }
     )
 
-    feature_selection_tasks >> feature_selection_to_models_task >> model_hyperparameter_tuning_tasks >> model_ensemble_task
+    feature_selection_tasks >> feature_selection_to_models_task >> model_hyperparameter_tuning_tasks >> model_train_best_task
