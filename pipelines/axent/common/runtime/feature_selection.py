@@ -15,7 +15,15 @@ class FeatureSelection:
         self._dp:TrainTestDataProvider = data_provider
         self._fp:FeaturesDataProvider = features_provider
 
-    def _get_all_features(self, excluded_features:List[str] = []):
+    def _get_all_features(self, excluded_features:List[str] = []) -> List[str]:
+        """Returns all dataset columns that can be used as features
+
+        Args:
+            excluded_features (List[str], optional): list of excluded features. Defaults to [].
+
+        Returns:
+            List[str]: List of features
+        """
         dp_train_df = self._dp.get_train_dataframe()
         all_features = []
         for c in dp_train_df.columns:

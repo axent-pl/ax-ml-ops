@@ -41,10 +41,4 @@ class ModelHyperParameterTuning:
 
         study.optimize(objective, n_trials=n_trials, callbacks=[mlflc])
 
-        return {
-            "model_class": model_class,
-            "features_class": features_class,
-            "scoring": scoring,
-            "score": study.best_value,
-            "params": study.best_params
-        }
+        return study.best_params, study.best_value

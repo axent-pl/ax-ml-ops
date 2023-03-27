@@ -9,6 +9,7 @@ from axent.common.runtime import ModelHyperParameterTuning
 from axent.common.runtime import FeatureSelection
 from axent.common.task import ModelTrainBest
 from axent.kaggle_spaceship_titanic.data import run as prepare_data
+from axent.common.task.model_hyperparameter_tuning_task import ModelHyperParameterTuningTask
 
 ##### Inititalize globals #####
 
@@ -33,7 +34,6 @@ fp.set_base_uri(features_dataset.uri)
 ##### Inititalize task processors #####
 
 feature_selection = FeatureSelection(data_provider=dp, features_provider=fp)
-model_hyperparameter_tuning = ModelHyperParameterTuning(data_provider=dp, features_provider=fp)
 model_train_best = ModelTrainBest(data_provider=dp, features_provider=fp)
 
 
@@ -101,7 +101,7 @@ with DAG(
 
     model_hyperparameter_tuning_tasks = PythonOperator.partial(
         task_id='model-hyperparameter-tuning',
-        python_callable=model_hyperparameter_tuning.run
+        python_callable=ModelHyperParameterTuningTask(data_provider=dp, features_provider=fp).execute
     ).expand(
         op_kwargs = XComArg(feature_selection_to_models_task, key='return_value')
     )

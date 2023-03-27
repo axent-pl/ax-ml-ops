@@ -4,13 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_validate
-
-class ModelClass(str, Enum):
-    CBC = 'CatBoostClassifier'
-    RFC = 'RandomForestClassifier'
-    SVC = 'SVC'
-    LRC = 'LogisticRegression'
-
+from .model_class import ModelClass
 
 class ModelFactory:
 
@@ -69,16 +63,9 @@ class ModelFactory:
         return LogisticRegression(**_params)
 
     def get(model_class: ModelClass, trial = None, params = None):
-        if model_class == ModelClass.CBC:
-            return ModelFactory._get_CBC(trial, params)
-        if model_class == ModelClass.RFC:
-            return ModelFactory._get_RFC(trial, params)
-        if model_class == ModelClass.SVC:
-            return ModelFactory._get_SVC(trial, params)
-        if model_class == ModelClass.LRC:
-            return ModelFactory._get_LRC(trial, params)
-
-        raise Exception('Unsupported model class')
+        if hasattr(ModelFactory, f'_get_{model_class.name}'):
+            return getattr(ModelFactory, f'_get_{model_class.name}')(trial, params)
+        raise NotImplementedError(f'Model class {model_class.name} not implemented')
 
 
 class ModelTrain:
