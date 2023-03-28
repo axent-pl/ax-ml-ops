@@ -39,6 +39,10 @@ class ModelHyperparameterTuning:
             storage=f'postgresql+psycopg2://optuna:{os.environ.get("DB_OPTUNA_PASS")}@db/optuna'
         )
 
-        study.optimize(objective, n_trials=n_trials, callbacks=[mlflc])
+        trials = study.get_trials()
+        completed_trials = len([ 1 for trial in trials if trial.state == optuna.trial.TrialState.COMPLETE ])
+        todo_trials = min(0, n_trials-completed_trials)
+        if todo_trials:
+            study.optimize(objective, n_trials=todo_trials, callbacks=[mlflc])
 
         return study.best_params, study.best_value
