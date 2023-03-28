@@ -9,6 +9,10 @@ class ModelTrainBestTask:
         self._dp:TrainTestDataProvider = data_provider
         self._fp:FeaturesDataProvider = features_provider
 
-    def execute(self, ti:TaskInstance):
-        model_params = ti.xcom_pull(key='model_hyperparameter_tuning_result')
-        return model_params
+    def execute(self, ti:TaskInstance, model_results_key:str = 'model_hyperparameter_tuning_result'):
+        model_results = ti.xcom_pull(key=model_results_key)
+        best_result = None
+        for result in model_results:
+            if best_result is None or best_result['score'] < result['score']:
+                best_result = result
+        ti.xcom_push(key='model_train_best_result', value=best_result)

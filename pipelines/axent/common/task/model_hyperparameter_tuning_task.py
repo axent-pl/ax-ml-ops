@@ -15,6 +15,7 @@ class ModelHyperparameterTuningTask:
             "features_class": features_class,
             "scoring": scoring,
             "score": best_value,
+            "direction": direction,
             "params": best_params
         }
         ti.xcom_push(key='model_hyperparameter_tuning_result', value=result)
