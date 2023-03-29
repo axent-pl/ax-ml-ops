@@ -39,7 +39,6 @@ def feature_selection_to_models_callable(ti):
             model_hyperparameter_tuning_input = {}
             model_hyperparameter_tuning_input['model_name'] = model_name
             model_hyperparameter_tuning_input['features_class'] = feature_selection_output['features_class']
-            model_hyperparameter_tuning_input['label'] = f"{model_name.lower()}-{model_hyperparameter_tuning_input['features_class']}-{version}"
             model_hyperparameter_tuning_input['n_trials'] = n_trials
             output.append(model_hyperparameter_tuning_input)
     return output

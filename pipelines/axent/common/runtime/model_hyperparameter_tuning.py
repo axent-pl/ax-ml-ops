@@ -14,6 +14,20 @@ class ModelHyperparameterTuning:
         self._fp:FeaturesDataProvider = features_provider
 
     def run(self, model_name: str, features_class: str, label: str = None, n_trials: int = 100, n_splits: int = 5, scoring: str = 'accuracy', direction = 'maximize', *args, **kwargs):
+        """Runs the model hyperparameter tuning
+
+        Args:
+            model_name (str): Model name (model class name)
+            features_class (str): Features class name
+            label (str, optional): Label of the MLFlow run name and Optuna study name. Defaults to None (model_name will be used).
+            n_trials (int, optional): Number of trials in Optuna study. Defaults to 100.
+            n_splits (int, optional): Number of splits in CV scores. Defaults to 5.
+            scoring (str, optional): Scoring method. Defaults to 'accuracy'.
+            direction (str, optional): Optuna study optimization direction. Defaults to 'maximize'.
+
+        Returns:
+            _type_: _description_
+        """
         mlflc = MLflowCallback(metric_name=scoring)
 
         @mlflc.track_in_mlflow()
@@ -41,7 +55,7 @@ class ModelHyperparameterTuning:
 
         trials = study.get_trials()
         completed_trials = len([ 1 for trial in trials if trial.state == optuna.trial.TrialState.COMPLETE ])
-        todo_trials = min(0, n_trials-completed_trials)
+        todo_trials = max(0, n_trials-completed_trials)
         if todo_trials:
             study.optimize(objective, n_trials=todo_trials, callbacks=[mlflc])
 
