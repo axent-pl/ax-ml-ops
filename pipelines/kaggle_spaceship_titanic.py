@@ -2,12 +2,11 @@ from datetime import datetime
 from airflow import DAG, Dataset, XComArg
 from airflow.operators.python import PythonOperator
 
-from axent.common.model import ModelClass
 from axent.common.data import TrainTestDataProvider
 from axent.common.data import FeaturesDataProvider
-from axent.common.runtime import ModelHyperParameterTuning
 from axent.common.runtime import FeatureSelection
-from axent.common.task import ModelTrainBest
+from axent.common.task import ModelTrainBestTask
+from axent.common.task import ModelHyperparameterTuningTask
 from axent.kaggle_spaceship_titanic.data import run as prepare_data
 
 ##### Inititalize globals #####
@@ -30,24 +29,17 @@ fp = FeaturesDataProvider()
 fp.set_base_uri(features_dataset.uri)
 
 
-##### Inititalize task processors #####
-
-feature_selection = FeatureSelection(data_provider=dp, features_provider=fp)
-model_hyperparameter_tuning = ModelHyperParameterTuning(data_provider=dp, features_provider=fp)
-model_train_best = ModelTrainBest(data_provider=dp, features_provider=fp)
-
-
 ##### Callables #####
 
 def feature_selection_to_models_callable(ti):
     output = []
     feature_selection_outputs = ti.xcom_pull(key="return_value", task_ids="feature-selection")
     for feature_selection_output in feature_selection_outputs:
-        for model_class in [ModelClass.CBC]:
+        for model_name in ['CatBoostClassifierModel']:
             model_hyperparameter_tuning_input = {}
-            model_hyperparameter_tuning_input['model_class'] = model_class
+            model_hyperparameter_tuning_input['model_name'] = model_name
             model_hyperparameter_tuning_input['features_class'] = feature_selection_output['features_class']
-            model_hyperparameter_tuning_input['label'] = f"{model_class.value.lower()}-{model_hyperparameter_tuning_input['features_class']}-{version}"
+            model_hyperparameter_tuning_input['label'] = f"{model_name.lower()}-{model_hyperparameter_tuning_input['features_class']}-{version}"
             model_hyperparameter_tuning_input['n_trials'] = n_trials
             output.append(model_hyperparameter_tuning_input)
     return output
@@ -84,7 +76,7 @@ with DAG(
 
     feature_selection_tasks = PythonOperator.partial(
         task_id='feature-selection',
-        python_callable=feature_selection.run
+        python_callable=FeatureSelection(data_provider=dp, features_provider=fp).run
     ).expand(
         op_kwargs = [
             { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr_06', 'max_correlation':0.6 },
@@ -101,18 +93,14 @@ with DAG(
 
     model_hyperparameter_tuning_tasks = PythonOperator.partial(
         task_id='model-hyperparameter-tuning',
-        python_callable=model_hyperparameter_tuning.run
+        python_callable=ModelHyperparameterTuningTask(data_provider=dp, features_provider=fp).execute
     ).expand(
         op_kwargs = XComArg(feature_selection_to_models_task, key='return_value')
     )
 
     model_train_best_task = PythonOperator(
         task_id='model-train-best',
-        python_callable=model_train_best.execute,
-        inlets=[train_test_dataset],
-        op_kwargs={
-            'task_ids':'model-hyperparameter-tuning'
-        }
+        python_callable=ModelTrainBestTask(data_provider=dp, features_provider=fp).execute
     )
 
     feature_selection_tasks >> feature_selection_to_models_task >> model_hyperparameter_tuning_tasks >> model_train_best_task

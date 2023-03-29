@@ -15,7 +15,15 @@ class FeatureSelection:
         self._dp:TrainTestDataProvider = data_provider
         self._fp:FeaturesDataProvider = features_provider
 
-    def _get_all_features(self, excluded_features:List[str] = []):
+    def _get_all_features(self, excluded_features:List[str] = []) -> List[str]:
+        """Returns all dataset columns that can be used as features
+
+        Args:
+            excluded_features (List[str], optional): list of excluded features. Defaults to [].
+
+        Returns:
+            List[str]: List of features
+        """
         dp_train_df = self._dp.get_train_dataframe()
         all_features = []
         for c in dp_train_df.columns:
@@ -54,7 +62,16 @@ class FeatureSelection:
     def run_chi2_cap_corr(self, max_correlation:float = 0.5, excluded_features:List[str] = [], *args, **kwargs):
         return self._run_selector_cap_corr('chi2', max_correlation=max_correlation, excluded_features=excluded_features)
 
-    def run_chi2_k_best(self, k:int, excluded_features:List[str] = [], *args, **kwargs):
+    def run_chi2_k_best(self, k:int, excluded_features:List[str] = [], *args, **kwargs) -> List[str]:
+        """Returns the k best features based on chi2 score
+
+        Args:
+            k (int): number of features to select
+            excluded_features (List[str], optional): List of excluded features. Defaults to [].
+
+        Returns:
+            List[str]: List of selected features
+        """
         all_features = self._get_all_features(excluded_features=excluded_features)
         X = self._dp.get_train_dataframe()[all_features].to_numpy()
         y = self._dp.get_y_train()
@@ -77,4 +94,5 @@ class FeatureSelection:
             return {
                 'features_class': features_class
             }
-        raise Exception(f'Mode {mode} not supported')
+        else:
+            raise NotImplemented(f'Mode "{mode}" not implemented')

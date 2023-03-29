@@ -54,6 +54,15 @@ class TrainTestDataProvider(ABC):
         self._loaded = True
 
     def can_be_x_column(self, column:str, allowed_dtypes:List[str] = ['float64','int64']) -> bool:
+        """Check if column can be used as x column (a feature)
+
+        Args:
+            column (str): column name
+            allowed_dtypes (List[str], optional): List of allowed dtypes. Defaults to ['float64','int64'].
+
+        Returns:
+            bool: flag indicating if column can be used as x column (a feature)
+        """
         if self._train_column and column == self._train_column:
             return False
         if type(self._y_columns) == str and column == self._y_columns:
@@ -93,9 +102,19 @@ class TrainTestDataProvider(ABC):
         return self._get_df()
 
     def get_train_dataframe(self) -> DataFrame:
+        """ Get train dataframe
+
+        Returns:
+            DataFrame: train dataframe
+        """
         return self._get_df().query(self.get_train_query())
 
     def get_test_dataframe(self) -> DataFrame:
+        """ Get test dataframe
+
+        Returns:
+            DataFrame: test dataframe
+        """
         return self._get_df().query(self.get_test_query())
 
     def set_x_columns(self, x_columns:List[str]) -> None:
