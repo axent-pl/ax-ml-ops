@@ -8,6 +8,7 @@ from axent.common.runtime import FeatureSelection
 from axent.common.task import ModelTrainBestTask
 from axent.common.task import ModelHyperparameterTuningTask
 from axent.kaggle_spaceship_titanic.data import run as prepare_data
+from axent.common.model import CatBoostClassifierModel
 
 ##### Inititalize globals #####
 
@@ -35,7 +36,7 @@ def feature_selection_to_models_callable(ti):
     output = []
     feature_selection_outputs = ti.xcom_pull(key="return_value", task_ids="feature-selection")
     for feature_selection_output in feature_selection_outputs:
-        for model_name in ['CatBoostClassifierModel']:
+        for model_name in [CatBoostClassifierModel.__name__]:
             model_hyperparameter_tuning_input = {}
             model_hyperparameter_tuning_input['model_name'] = model_name
             model_hyperparameter_tuning_input['features_class'] = feature_selection_output['features_class']
