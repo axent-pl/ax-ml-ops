@@ -1,19 +1,20 @@
 from sklearn.ensemble import RandomForestClassifier
-from ...model.model_base import ModelBase
+from ..model_base import ModelBase
 
-class RandomForestClassifierModel(ModelBase):
+class RandomForestClassifierModel(RandomForestClassifier, ModelBase):
 
-    def initialize(self,trial,params) -> RandomForestClassifier:
-        _params = {}
-        if trial:
+    def __init__(self, **kwargs):
+        if 'trial' in kwargs:
             _params = {
-                'bootstrap': trial.suggest_categorical("bootstrap", [True, False]),
-                'max_depth': trial.suggest_int("max_depth", 10, 100, step = 10),
-                'min_samples_leaf': trial.suggest_int("min_samples_leaf", 1, 12),
-                'min_samples_split': trial.suggest_int("min_samples_split", 2, 12),
-                "n_estimators": trial.suggest_int("n_estimators", 5, 2000, log = True),
+                'bootstrap': kwargs['trial'].suggest_categorical("bootstrap", [True, False]),
+                'max_depth': kwargs['trial'].suggest_int("max_depth", 10, 100, step = 10),
+                'min_samples_leaf': kwargs['trial'].suggest_int("min_samples_leaf", 1, 12),
+                'min_samples_split': kwargs['trial'].suggest_int("min_samples_split", 2, 12),
+                "n_estimators": kwargs['trial'].suggest_int("n_estimators", 5, 2000, log = True),
                 "random_state": 7
             }
+            RandomForestClassifier.__init__(self, **_params)
         else:
-            _params = params
-        return RandomForestClassifier(**_params)
+            RandomForestClassifier.__init__(self, **kwargs)
+        
+        

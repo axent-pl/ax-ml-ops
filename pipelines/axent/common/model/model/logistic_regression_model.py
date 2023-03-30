@@ -1,16 +1,15 @@
 from sklearn.linear_model import LogisticRegression
-from ...model.model_base import ModelBase
+from ..model_base import ModelBase
 
-class LogisticRegressionModel(ModelBase):
+class LogisticRegressionModel(LogisticRegression, ModelBase):
 
-    def initialize(self, trial, params) -> LogisticRegression:
-        _params = {}
-        if trial:
+    def __init__(self, **kwargs):
+        if 'trial' in kwargs:
             _params = {
-                "C": trial.suggest_float("C", 0.1, 100, log = True),
-                "max_iter": trial.suggest_int("max_iter", 5, 500),
+                "C": kwargs['trial'].suggest_float("C", 0.1, 100, log = True),
+                "max_iter": kwargs['trial'].suggest_int("max_iter", 5, 500),
                 "random_state": 7
             }
+            LogisticRegression.__init__(self, **_params)
         else:
-            _params = params
-        return LogisticRegression(**_params)
+            LogisticRegression.__init__(self, **kwargs)
