@@ -35,7 +35,7 @@ class ModelHyperparameterTuning:
             x_train = self._dp.get_x_train(self._fp.get_features(features_class=features_class))
             y_train = self._dp.get_y_train()
             scores = ModelTrain.get_cv_scores(model_name=model_name, x=x_train, y=y_train, trial=trial, n_splits=n_splits, scoring=scoring)
-            mlflow.log_param("model_class", model_name)
+            mlflow.log_param("model_name", model_name)
             mlflow.log_param("features_class", features_class)
             mlflow.log_metric(f"train_min_{scoring}", scores["train_score"].min())
             mlflow.log_metric(f"train_mean_{scoring}", scores["train_score"].mean())

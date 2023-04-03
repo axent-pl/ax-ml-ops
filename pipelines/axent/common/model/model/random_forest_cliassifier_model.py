@@ -1,10 +1,11 @@
+import mlflow
 from sklearn.ensemble import RandomForestClassifier
 from ..model_base import ModelBase
 
 class RandomForestClassifierModel(RandomForestClassifier, ModelBase):
 
     def __init__(self, **kwargs):
-        if 'trial' in kwargs:
+        if 'trial' in kwargs and kwargs['trial'] is not None:
             _params = {
                 'bootstrap': kwargs['trial'].suggest_categorical("bootstrap", [True, False]),
                 'max_depth': kwargs['trial'].suggest_int("max_depth", 10, 100, step = 10),
@@ -16,5 +17,7 @@ class RandomForestClassifierModel(RandomForestClassifier, ModelBase):
             RandomForestClassifier.__init__(self, **_params)
         else:
             RandomForestClassifier.__init__(self, **kwargs)
-        
+
+    def get_serializer(self):
+        return mlflow.sklearn
         

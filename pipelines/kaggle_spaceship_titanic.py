@@ -12,7 +12,6 @@ from axent.common.model import CatBoostClassifierModel
 
 ##### Inititalize globals #####
 
-version = 'v2'
 n_trials = 10
 
 
@@ -79,10 +78,10 @@ with DAG(
         python_callable=FeatureSelection(data_provider=dp, features_provider=fp).run
     ).expand(
         op_kwargs = [
-            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr_06', 'max_correlation':0.6 },
-            { 'mode':'chi2_cap_corr', 'label':'chi2_cap_corr_06_no_vip', 'max_correlation':0.6, 'excluded_features':['VIP'] },
-            { 'mode':'chi2_k_best', 'label':'chi2_20_best', 'k':20 },
-            { 'mode':'chi2_k_best', 'label':'chi2_22_best', 'k':22 }
+            { 'mode':'chi2_cap_corr', 'label':'chi2-corr60', 'max_correlation':0.6 },
+            { 'mode':'chi2_cap_corr', 'label':'chi2-corr60-no-vip', 'max_correlation':0.6, 'excluded_features':['VIP'] },
+            { 'mode':'chi2_k_best', 'label':'chi2-best20', 'k':20 },
+            { 'mode':'chi2_k_best', 'label':'chi2-best22', 'k':22 }
         ]
     )
 
