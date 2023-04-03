@@ -1,11 +1,12 @@
 from catboost import CatBoostClassifier
+import mlflow
 from ..model_base import ModelBase
 
 
 class CatBoostClassifierModel(CatBoostClassifier,ModelBase):
     
     def __init__(self, **kwargs):
-        if 'trial' in kwargs:
+        if 'trial' in kwargs and kwargs['trial'] is not None:
             _params = {
                 "n_estimators": kwargs['trial'].suggest_int("n_estimators", 100, 5000, step = 50),
                 "learning_rate": kwargs['trial'].suggest_float("learning_rate", 1e-4, 0.3, log = True),
@@ -18,3 +19,5 @@ class CatBoostClassifierModel(CatBoostClassifier,ModelBase):
         else:
             CatBoostClassifier.__init__(self, **kwargs)
         
+    def get_serializer(self):
+        return mlflow.catboost

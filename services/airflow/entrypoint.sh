@@ -13,6 +13,7 @@ export AIRFLOW__CORE__DAGS_FOLDER=/home/airflow/pipelines
 export PATH=/home/airflow/.local/bin:$PATH
 export AIRFLOW__CORE__EXECUTOR=CeleryExecutor
 export AIRFLOW__CELERY__BROKER_URL="amqp://${MQ_USER}:${MQ_PASS}@${MQ_HOST}/"
+export AIRFLOW__LOGGING__DAG_PROCESSOR_LOG_TARGET=stdout
 
 until airflow db check; do echo "[INFO ]: Waiting for database"; sleep 5; done;
 

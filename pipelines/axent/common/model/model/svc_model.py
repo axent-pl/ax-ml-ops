@@ -1,10 +1,11 @@
+import mlflow
 from sklearn.svm import SVC
 from ..model_base import ModelBase
 
 class SVCModel(SVC, ModelBase):
 
     def __init__(self, **kwargs):
-        if 'trial' in kwargs:
+        if 'trial' in kwargs and kwargs['trial'] is not None:
             _params = {
                 "C": kwargs['trial'].suggest_float("C", 0.1, 1000, log = True),
                 "gamma": kwargs['trial'].suggest_float("gamma", 0.0001, 1),
@@ -13,4 +14,6 @@ class SVCModel(SVC, ModelBase):
             SVC.__init__(self, **_params)
         else:
             SVC.__init__(self, **kwargs)
-        
+
+    def get_serializer(self):
+        return mlflow.sklearn
