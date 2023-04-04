@@ -1,4 +1,3 @@
-import mlflow
 from sklearn.ensemble import RandomForestClassifier
 from ..model_base import ModelBase
 
@@ -17,7 +16,4 @@ class RandomForestClassifierModel(RandomForestClassifier, ModelBase):
             RandomForestClassifier.__init__(self, **_params)
         else:
             RandomForestClassifier.__init__(self, **kwargs)
-
-    def get_serializer(self):
-        return mlflow.sklearn
         

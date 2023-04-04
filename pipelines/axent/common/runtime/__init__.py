@@ -1,3 +1,4 @@
 from .feature_selection import FeatureSelection
 from .model_hyperparameter_tuning import ModelHyperparameterTuning
 from .model_trainer import ModelTrainer
+from .model_serializer import ModelSerializer

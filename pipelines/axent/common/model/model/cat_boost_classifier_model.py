@@ -1,5 +1,4 @@
 from catboost import CatBoostClassifier
-import mlflow
 from ..model_base import ModelBase
 
 
@@ -18,6 +17,3 @@ class CatBoostClassifierModel(CatBoostClassifier,ModelBase):
             CatBoostClassifier.__init__(self, **_params)
         else:
             CatBoostClassifier.__init__(self, **kwargs)
-        
-    def get_serializer(self):
-        return mlflow.catboost
