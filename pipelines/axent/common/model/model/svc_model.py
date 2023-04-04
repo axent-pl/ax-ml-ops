@@ -1,4 +1,3 @@
-import mlflow
 from sklearn.svm import SVC
 from ..model_base import ModelBase
 
@@ -14,6 +13,3 @@ class SVCModel(SVC, ModelBase):
             SVC.__init__(self, **_params)
         else:
             SVC.__init__(self, **kwargs)
-
-    def get_serializer(self):
-        return mlflow.sklearn

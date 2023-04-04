@@ -1,4 +1,3 @@
-import mlflow
 from sklearn.linear_model import LogisticRegression
 from ..model_base import ModelBase
 
@@ -14,6 +13,3 @@ class LogisticRegressionModel(LogisticRegression, ModelBase):
             LogisticRegression.__init__(self, **_params)
         else:
             LogisticRegression.__init__(self, **kwargs)
-
-    def get_serializer(self):
-        return mlflow.sklearn

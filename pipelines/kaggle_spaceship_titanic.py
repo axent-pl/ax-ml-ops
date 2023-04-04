@@ -79,7 +79,9 @@ with DAG(
     ).expand(
         op_kwargs = [
             { 'mode':'chi2_cap_corr', 'label':'chi2-corr60', 'max_correlation':0.6 },
+            { 'mode':'chi2_cap_corr', 'label':'chi2-corr40-no-vip', 'max_correlation':0.4, 'excluded_features':['VIP'] },
             { 'mode':'chi2_cap_corr', 'label':'chi2-corr60-no-vip', 'max_correlation':0.6, 'excluded_features':['VIP'] },
+            { 'mode':'chi2_cap_corr', 'label':'chi2-corr80-no-vip', 'max_correlation':0.8, 'excluded_features':['VIP'] },
             { 'mode':'chi2_k_best', 'label':'chi2-best20', 'k':20 },
             { 'mode':'chi2_k_best', 'label':'chi2-best22', 'k':22 }
         ]
